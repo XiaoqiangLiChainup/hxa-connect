@@ -15,6 +15,7 @@ import {
   broadcastMessage as doBroadcastMessage,
   broadcastThreadEvent as doBroadcastThreadEvent,
   broadcastToOrg as doBroadcastToOrg,
+  notifyAdminsOfJoinRequest as doNotifyAdminsOfJoinRequest,
   sendToClient,
 } from './broadcast.js';
 import {
@@ -385,6 +386,10 @@ export class HubWS implements WsHub {
 
   broadcastToOrg(orgId: string, event: WsServerEvent, excludeBotId?: string): void {
     doBroadcastToOrg(this.clients, orgId, event, excludeBotId);
+  }
+
+  async notifyAdminsOfJoinRequest(orgId: string, bot: { id: string; name: string }): Promise<void> {
+    await doNotifyAdminsOfJoinRequest(this.clients, this.db, this.webhookManager, orgId, bot);
   }
 
   // ─── Public API ────────────────────────────────────────────

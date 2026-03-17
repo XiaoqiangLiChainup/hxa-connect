@@ -4,7 +4,7 @@
  * Tests the org-level join_approval_required setting and bot join_status field.
  */
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { createTestEnv, type TestEnv } from './helpers.js';
+import { createTestEnv, api, type TestEnv } from './helpers.js';
 import WebSocket from 'ws';
 
 describe('Bot Join Approval (#133)', () => {
@@ -304,6 +304,150 @@ describe('Bot Join Approval (#133)', () => {
         );
         expect(entry).toBeDefined();
       }
+    });
+  });
+
+  // ─── Plan B+C: Admin Notification Tests ─────────────────────
+
+  /** Connect a WebSocket using an org_admin session cookie */
+  async function connectAdminWs(cookie: string): Promise<WebSocket> {
+    const { body } = await api(env.baseUrl, 'POST', '/api/ws-ticket', { cookie });
+    const wsUrl = env.baseUrl.replace('http://', 'ws://') + `/ws?ticket=${body.ticket}`;
+    const ws = new WebSocket(wsUrl);
+    await new Promise<void>((resolve, reject) => {
+      ws.on('open', resolve);
+      ws.on('error', reject);
+    });
+    return ws;
+  }
+
+  /** Connect a WebSocket using a bot token */
+  async function connectBotWs(token: string): Promise<WebSocket> {
+    const { body } = await api(env.baseUrl, 'POST', '/api/ws-ticket', { token });
+    const wsUrl = env.baseUrl.replace('http://', 'ws://') + `/ws?ticket=${body.ticket}`;
+    const ws = new WebSocket(wsUrl);
+    await new Promise<void>((resolve, reject) => {
+      ws.on('open', resolve);
+      ws.on('error', reject);
+    });
+    return ws;
+  }
+
+  function collectMessages(ws: WebSocket): any[] {
+    const messages: any[] = [];
+    ws.on('message', (raw: WebSocket.RawData) => {
+      messages.push(JSON.parse(raw.toString()));
+    });
+    return messages;
+  }
+
+  describe('Plan C: bot_join_request WS event to admins', () => {
+    it('admin WS client receives bot_join_request when pending bot registers', async () => {
+      const { id: orgId, org_secret } = await env.createOrg('test-ws-notify');
+      const cookie = await enableApproval(org_secret);
+
+      // Connect admin WS
+      const adminWs = await connectAdminWs(cookie);
+      const messages = collectMessages(adminWs);
+
+      // Wait a bit for WS to stabilize
+      await new Promise(r => setTimeout(r, 100));
+
+      // Register a pending bot
+      const ticket = await createTicket(orgId);
+      await registerWithTicket(orgId, ticket.id, 'notified-bot');
+
+      // Wait for WS events
+      await new Promise(r => setTimeout(r, 300));
+
+      const joinRequest = messages.find((m: any) => m.type === 'bot_join_request');
+      expect(joinRequest).toBeDefined();
+      expect(joinRequest.bot.name).toBe('notified-bot');
+      expect(joinRequest.org_id).toBe(orgId);
+
+      adminWs.close();
+    });
+
+    it('non-admin WS client does NOT receive bot_join_request', async () => {
+      const { id: orgId, org_secret } = await env.createOrg('test-ws-no-notify-member');
+      // Register admin bot + a member bot first (before enabling approval)
+      const adminResult = await env.registerBot(org_secret, 'admin-for-notify');
+      await env.promoteBot(org_secret, adminResult.bot.bot_id || adminResult.bot.id);
+      const memberResult = await env.registerBot(org_secret, 'member-viewer');
+
+      // Enable approval
+      await enableApproval(org_secret);
+
+      // Connect member WS
+      const memberWs = await connectBotWs(memberResult.token);
+      const messages = collectMessages(memberWs);
+
+      await new Promise(r => setTimeout(r, 100));
+
+      // Register a pending bot
+      const ticket = await createTicket(orgId);
+      await registerWithTicket(orgId, ticket.id, 'pending-no-notify');
+
+      await new Promise(r => setTimeout(r, 300));
+
+      // Member should get bot_registered but NOT bot_join_request
+      const joinRequest = messages.find((m: any) => m.type === 'bot_join_request');
+      expect(joinRequest).toBeUndefined();
+
+      memberWs.close();
+    });
+
+    it('no bot_join_request when approval is not required', async () => {
+      const { id: orgId, org_secret } = await env.createOrg('test-ws-no-approval');
+      const cookie = await env.loginAsOrg(org_secret);
+
+      // Connect admin WS (no approval enabled)
+      const adminWs = await connectAdminWs(cookie);
+      const messages = collectMessages(adminWs);
+
+      await new Promise(r => setTimeout(r, 100));
+
+      // Register a bot normally (no approval → active immediately)
+      const ticket = await createTicket(orgId);
+      await registerWithTicket(orgId, ticket.id, 'instant-bot');
+
+      await new Promise(r => setTimeout(r, 300));
+
+      // Should get bot_registered but NOT bot_join_request
+      const joinRequest = messages.find((m: any) => m.type === 'bot_join_request');
+      expect(joinRequest).toBeUndefined();
+
+      const botRegistered = messages.find((m: any) => m.type === 'bot_registered' && m.bot?.name === 'instant-bot');
+      expect(botRegistered).toBeDefined();
+      expect(botRegistered.bot.join_status).toBe('active');
+
+      adminWs.close();
+    });
+  });
+
+  describe('Plan B: webhook notification to admin bots', () => {
+    it('admin bot with webhook_url triggers delivery without breaking registration', async () => {
+      const { id: orgId, org_secret } = await env.createOrg('test-webhook-notify');
+
+      // Register admin bot normally, then set webhook_url directly in DB
+      // (bypasses SSRF validation which blocks localhost in non-DEV_MODE)
+      const adminResult = await env.registerBot(org_secret, 'webhook-admin');
+      const adminBotId = adminResult.bot.bot_id || adminResult.bot.id;
+      await env.promoteBot(org_secret, adminBotId);
+      // Set webhook_url directly in DB (SSRF blocks http/localhost in tests)
+      await (env.db as any).driver.run(
+        'UPDATE bots SET webhook_url = ? WHERE id = ?',
+        ['https://example.com/webhook', adminBotId],
+      );
+
+      // Enable approval
+      await enableApproval(org_secret);
+
+      // Register pending bot — should not throw despite webhook delivery to unreachable URL
+      const ticket = await createTicket(orgId);
+      const { res, data } = await registerWithTicket(orgId, ticket.id, 'pending-webhook-test');
+      expect(res.ok).toBe(true);
+      expect(data.join_status).toBe('pending');
     });
   });
 });

@@ -1213,6 +1213,10 @@ export function createRouter(db: HubDB, ws: HubWS, config: HubConfig, sessionSto
           type: 'bot_registered',
           bot: { id: ticketBot.id, name: ticketBot.name, join_status: ticketBot.join_status },
         });
+        // #133 B+C: If pending, notify admins via dedicated WS event + webhook
+        if (ticketBot.join_status === 'pending') {
+          ws.notifyAdminsOfJoinRequest(org_id, { id: ticketBot.id, name: ticketBot.name }).catch(() => {});
+        }
       } catch { /* broadcast failure must not prevent registration response */ }
       const ticketResponse: RegisterResponse = {
         bot_id: ticketBot.id,
@@ -1260,6 +1264,10 @@ export function createRouter(db: HubDB, ws: HubWS, config: HubConfig, sessionSto
         type: 'bot_registered',
         bot: { id: bot.id, name: bot.name, join_status: bot.join_status },
       });
+      // #133 B+C: If pending, notify admins via dedicated WS event + webhook
+      if (bot.join_status === 'pending') {
+        ws.notifyAdminsOfJoinRequest(org_id, { id: bot.id, name: bot.name }).catch(() => {});
+      }
     } catch { /* broadcast failure must not prevent registration response */ }
     const response: RegisterResponse = {
       bot_id: bot.id,

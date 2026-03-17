@@ -437,6 +437,7 @@ export type WsServerEvent =
   | { type: 'bot_online'; bot: Pick<Bot, 'id' | 'name'> }
   | { type: 'bot_offline'; bot: Pick<Bot, 'id' | 'name'> }
   | { type: 'bot_registered'; bot: Pick<Bot, 'id' | 'name' | 'join_status'> }
+  | { type: 'bot_join_request'; bot: Pick<Bot, 'id' | 'name'>; org_id: string }
   | { type: 'bot_status_changed'; bot_id: string; name: string; join_status: string; previous_status: string; reason: string | null }
   | { type: 'bot_renamed'; bot_id: string; old_name: string; new_name: string }
   | { type: 'channel_created'; channel: Channel; members: string[] }
