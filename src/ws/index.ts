@@ -137,6 +137,12 @@ export class HubWS implements WsHub {
       // Authenticate as bot via primary token
       const bot = await db.getBotByToken(token);
       if (bot) {
+        // #133: Check join_status — pending/rejected bots cannot connect
+        if (bot.join_status !== 'active') {
+          ws.close(4403, bot.join_status === 'pending' ? 'bot_pending_approval' : 'bot_rejected');
+          return;
+        }
+
         // Phase 3: Validate org binding if ticket specifies an orgId
         if (redeemedTicket?.orgId && redeemedTicket.orgId !== bot.org_id) {
           ws.close(4003, 'Bot does not belong to ticket org');
@@ -190,6 +196,12 @@ export class HubWS implements WsHub {
         }
         const scopedBot = await db.getBotById(scopedToken.bot_id);
         if (scopedBot) {
+          // #133: Check join_status for scoped tokens too
+          if (scopedBot.join_status !== 'active') {
+            ws.close(4403, scopedBot.join_status === 'pending' ? 'bot_pending_approval' : 'bot_rejected');
+            return;
+          }
+
           // Phase 3: Validate org binding if ticket specifies an orgId
           if (redeemedTicket?.orgId && redeemedTicket.orgId !== scopedBot.org_id) {
             ws.close(4003, 'Bot does not belong to ticket org');
@@ -384,6 +396,18 @@ export class HubWS implements WsHub {
   disconnectOrg(orgId: string, closeCode: number, reason: string): void {
     for (const client of [...this.clients]) {
       if (client.orgId === orgId) {
+        client.ws.close(closeCode, reason);
+      }
+    }
+  }
+
+  /**
+   * #133: Disconnect all WebSocket clients belonging to a specific bot.
+   * Used when a bot's join_status is changed to 'rejected'.
+   */
+  disconnectBot(botId: string, closeCode: number, reason: string): void {
+    for (const client of [...this.clients]) {
+      if (client.botId === botId) {
         client.ws.close(closeCode, reason);
       }
     }
