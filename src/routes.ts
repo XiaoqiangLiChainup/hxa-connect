@@ -1749,9 +1749,11 @@ export function createRouter(db: HubDB, ws: HubWS, config: HubConfig, sessionSto
     const q = getQueryString(req.query.q);
 
     const bots = await db.listBots(orgId, { role, tag, status, q });
-    // #133: Non-admin bot callers only see active bots
-    const activeBots = bots.filter(bot => bot.join_status === 'active');
-    res.json(activeBots.map(bot => toBotResponse(bot)));
+    // #133: Non-admin callers only see active bots; admins see all (including pending/rejected)
+    const isAdmin = req.session?.role === 'org_admin' || req.session?.role === 'super_admin' ||
+      (req.bot?.auth_role === 'admin' && req.bot?.join_status === 'active');
+    const filteredBots = isAdmin ? bots : bots.filter(b => b.join_status === 'active');
+    res.json(filteredBots.map(bot => toBotResponse(bot)));
   });
 
   /**
