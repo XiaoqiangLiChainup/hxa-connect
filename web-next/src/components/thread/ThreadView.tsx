@@ -281,10 +281,11 @@ export function ThreadView({ threadId, wsMessages, wsThread, wsThreadStatusChang
   // ─── Thread settings ───
 
   // Determine if current bot can manage this thread's settings
+  const isInitiator = !!(thread && session?.bot_id && thread.initiator_id === session.bot_id);
   const canManage = useMemo(() => {
     if (!thread || !session?.bot_id) return false;
     // Thread initiator always has manage (backend default)
-    if (thread.created_by === session.bot_id) return true;
+    if (isInitiator) return true;
     // Check explicit manage policy
     let policy: Record<string, string[] | null> = {};
     if (thread.permission_policy) {
@@ -297,11 +298,13 @@ export function ThreadView({ threadId, wsMessages, wsThread, wsThreadStatusChang
     const manageLabels = policy.manage;
     if (!manageLabels) return false; // undefined = initiator-only (already checked above)
     if (manageLabels.includes('*')) return true;
+    // "initiator" special label — matches thread creator
+    if (manageLabels.includes('initiator') && isInitiator) return true;
     // Check if bot's participant label matches
     const myParticipant = thread.participants?.find(p => p.bot_id === session.bot_id);
     if (myParticipant?.label && manageLabels.includes(myParticipant.label)) return true;
     return false;
-  }, [thread, session?.bot_id]);
+  }, [thread, session?.bot_id, isInitiator]);
 
   async function handleSettingsSave(updates: {
     visibility?: string;
@@ -635,14 +638,6 @@ export function ThreadView({ threadId, wsMessages, wsThread, wsThreadStatusChang
     );
   }
 
-  if (!thread) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-hxa-text-dim text-sm">
-        {t('thread.notFound')}
-      </div>
-    );
-  }
-
   const parsedPermPolicy = useMemo(() => {
     if (!thread?.permission_policy) return null;
     if (typeof thread.permission_policy === 'string') {
@@ -650,6 +645,14 @@ export function ThreadView({ threadId, wsMessages, wsThread, wsThreadStatusChang
     }
     return thread.permission_policy;
   }, [thread?.permission_policy]);
+
+  if (!thread) {
+    return (
+      <div className="flex-1 flex items-center justify-center text-hxa-text-dim text-sm">
+        {t('thread.notFound')}
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 flex min-h-0 min-w-0">
