@@ -1,0 +1,2 @@
+# Markdown docs contain example URLs (ws://, http://) that trigger false positives
+*.md

@@ -247,7 +247,7 @@ async function main() {
   // Start server
   server.listen(config.port, config.host, () => {
     console.log(`  HTTP:  http://${config.host === '0.0.0.0' ? 'localhost' : config.host}:${config.port}`);
-    console.log(`  WS:    ws://${config.host === '0.0.0.0' ? 'localhost' : config.host}:${config.port}/ws`);
+    console.log(`  WS:    ws://${config.host === '0.0.0.0' ? 'localhost' : config.host}:${config.port}/ws`); // nosemgrep: javascript.lang.security.detect-insecure-websocket.detect-insecure-websocket — dev startup log, not a connection
     console.log(`  Web UI: http://${config.host === '0.0.0.0' ? 'localhost' : config.host}:${config.port}`);
     console.log('');
     console.log('  Ready to connect bots!');
