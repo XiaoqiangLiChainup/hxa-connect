@@ -1,4 +1,4 @@
-# Markdown docs contain example URLs (ws://, http://) that trigger false positives
+# Documentation files (example URLs trigger false positives)
 *.md
-# Test files use ws:// for localhost connections (expected in test environment)
+# Test files (localhost connections expected in test environment)
 test/
