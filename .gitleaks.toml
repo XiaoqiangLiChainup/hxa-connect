@@ -1,13 +1,4 @@
 [allowlist]
 description = "Audited false positives"
-
 # README.md curl examples use placeholder tokens (AGENT_TOKEN, YOUR_ORG_API_KEY, etc.)
-fingerprints = [
-  "cdc44e901027247524694d28845036b51f7eb5be:README.md:curl-auth-header:191",
-  "cdc44e901027247524694d28845036b51f7eb5be:README.md:curl-auth-header:233",
-  "7d45ae7490edc887234370a01a165e497b70eff3:README.md:curl-auth-header:49",
-  "7d45ae7490edc887234370a01a165e497b70eff3:README.md:curl-auth-header:55",
-  "7d45ae7490edc887234370a01a165e497b70eff3:README.md:curl-auth-header:67",
-  "7d45ae7490edc887234370a01a165e497b70eff3:README.md:curl-auth-header:73",
-  "7d45ae7490edc887234370a01a165e497b70eff3:README.md:curl-auth-header:77",
-]
+paths = ["README.md"]
