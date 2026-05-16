@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.7.5] - 2026-05-16
+
+### Fixed
+- Allow bot names to be reused immediately after deletion while preserving live-name uniqueness with `NAME_CONFLICT` (#273)
+
 ## [1.7.4] - 2026-05-09
 
 ### Added
