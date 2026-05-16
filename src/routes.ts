@@ -1284,13 +1284,6 @@ export function createRouter(db: HubDB, ws: HubWS, config: HubConfig, sessionSto
       );
 
       if ('conflict' in atomicResult) {
-        if (atomicResult.conflict === 'NAME_TOMBSTONED') {
-          res.status(409).json({
-            error: 'Bot name is reserved. An org admin must release it via DELETE /api/orgs/:org_id/tombstones/:name.',
-            code: 'NAME_TOMBSTONED',
-          });
-          return;
-        }
         if (atomicResult.conflict === 'NAME_CONFLICT') {
           res.status(409).json({ error: 'A bot with this name already exists', code: 'NAME_CONFLICT' });
           return;
@@ -1338,14 +1331,7 @@ export function createRouter(db: HubDB, ws: HubWS, config: HubConfig, sessionSto
     );
 
     if ('conflict' in result) {
-      if (result.conflict === 'NAME_TOMBSTONED') {
-        res.status(409).json({
-          error: 'Bot name is reserved. An org admin must release it via DELETE /api/orgs/:org_id/tombstones/:name.',
-          code: 'NAME_TOMBSTONED',
-        });
-      } else {
-        res.status(409).json({ error: 'A bot with this name already exists', code: 'NAME_CONFLICT' });
-      }
+      res.status(409).json({ error: 'A bot with this name already exists', code: 'NAME_CONFLICT' });
       return;
     }
 
@@ -1418,9 +1404,6 @@ export function createRouter(db: HubDB, ws: HubWS, config: HubConfig, sessionSto
   /**
    * DELETE /api/bots/:id — Remove a bot (org admin only)
    * Auth: Org ticket or admin bot token
-   * Security: Bot name is tombstoned on deletion to prevent identity hijack via
-   *           delete + re-register (Issue #199 A1). Name can only be released by
-   *           a human org admin via DELETE /api/orgs/:org_id/tombstones/:name.
    */
   auth.delete('/api/bots/:id', async (req, res) => {
     if (!requireOrgAdmin(req, res)) return;
@@ -1432,13 +1415,10 @@ export function createRouter(db: HubDB, ws: HubWS, config: HubConfig, sessionSto
       return;
     }
 
-    // #199 A1: Atomically tombstone the bot's name and delete the bot row in
-    // a single transaction. This eliminates the race window entirely — there is
-    // no point in time where the name is freed but the tombstone is not in place.
     const deletedBy = req.bot ? req.bot.id : 'session';
     const threadSyncBy = threadActorRef(req, orgId!);
     const affectedThreads = await db.getThreadsParticipatedByBot(bot.id);
-    await db.deleteBotWithTombstone(bot.id, bot.name, orgId!, deletedBy);
+    await db.deleteBotWithCleanup(bot.id);
     await db.recordAudit(orgId!, bot.id, 'bot.delete', 'bot', bot.id, { name: bot.name, deleted_by: deletedBy });
 
     // Terminate the deleted bot's active WebSocket connection immediately.
@@ -1463,10 +1443,8 @@ export function createRouter(db: HubDB, ws: HubWS, config: HubConfig, sessionSto
   auth.delete('/api/me', requireBot, requireScope('full'), async (req, res) => {
     const bot = req.bot!;
 
-    // #199 A1: Atomically tombstone the bot's name and delete the bot row in
-    // a single transaction (same reasoning as DELETE /api/bots/:id above).
     const affectedThreads = await db.getThreadsParticipatedByBot(bot.id);
-    await db.deleteBotWithTombstone(bot.id, bot.name, bot.org_id, bot.id);
+    await db.deleteBotWithCleanup(bot.id);
 
     // Terminate the self-deleting bot's active WebSocket connection immediately.
     // Without this, the connection stays open even though the token is now invalid.
@@ -1484,51 +1462,6 @@ export function createRouter(db: HubDB, ws: HubWS, config: HubConfig, sessionSto
     });
 
     res.json({ ok: true, message: `Bot "${bot.name}" deregistered` });
-  });
-
-  /**
-   * DELETE /api/orgs/:org_id/tombstones/:name — Release a bot name tombstone
-   * Auth: Human session (org_admin or super_admin) only — bot tokens are not accepted.
-   * This allows org admins to re-enable a bot name after intentional deletion.
-   */
-  auth.delete('/api/orgs/:org_id/tombstones/:name', async (req, res) => {
-    // Require human session (org_admin or super_admin) — bot tokens cannot release tombstones.
-    if (!req.session || (req.session.role !== 'org_admin' && req.session.role !== 'super_admin')) {
-      res.status(403).json({
-        error: 'Human session required to release a bot name tombstone',
-        code: 'HUMAN_SESSION_REQUIRED',
-      });
-      return;
-    }
-
-    const orgId = req.params.org_id as string;
-    const name = req.params.name as string;
-
-    // Verify the org exists
-    const org = await db.getOrgById(orgId);
-    if (!org) {
-      res.status(404).json({ error: 'Organization not found', code: 'NOT_FOUND' });
-      return;
-    }
-
-    // org_admin may only manage their own org
-    if (req.session.role === 'org_admin' && req.session.org_id !== orgId) {
-      res.status(403).json({ error: 'Cannot manage tombstones for a different organization', code: 'FORBIDDEN' });
-      return;
-    }
-
-    const cleared = await db.clearBotNameTombstone(orgId, name);
-    if (!cleared) {
-      res.status(404).json({ error: 'No tombstone found for this bot name', code: 'NOT_FOUND' });
-      return;
-    }
-
-    await db.recordAudit(orgId, null, 'bot.tombstone_cleared', 'bot', name, {
-      cleared_by_session: req.session.id,
-      cleared_by_role: req.session.role,
-    });
-
-    res.json({ ok: true, message: `Bot name "${name}" is now available for registration` });
   });
 
   /**
@@ -1697,14 +1630,7 @@ export function createRouter(db: HubDB, ws: HubWS, config: HubConfig, sessionSto
     const result = await db.renameBot(req.bot!.id, name);
 
     if (result.conflict) {
-      if (result.conflict === 'NAME_TOMBSTONED') {
-        res.status(409).json({
-          error: 'Bot name is reserved. An org admin must release it via DELETE /api/orgs/:org_id/tombstones/:name.',
-          code: 'NAME_TOMBSTONED',
-        });
-      } else {
-        res.status(409).json({ error: 'A bot with that name already exists in this org', code: 'NAME_CONFLICT' });
-      }
+      res.status(409).json({ error: 'A bot with that name already exists in this org', code: 'NAME_CONFLICT' });
       return;
     }
 

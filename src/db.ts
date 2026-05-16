@@ -458,22 +458,6 @@ export class HubDB {
       `);
     });
 
-    // Bot name tombstoning (Issue #199 A1): prevent deleted bot name re-registration
-    await this.runMigration('deleted_bot_names', async () => {
-      const ts2 = this.driver.dialect === 'postgres' ? 'BIGINT' : 'INTEGER';
-      await this.driver.exec(`
-        CREATE TABLE IF NOT EXISTS deleted_bot_names (
-          id TEXT PRIMARY KEY,
-          org_id TEXT NOT NULL REFERENCES orgs(id) ON DELETE CASCADE,
-          name TEXT NOT NULL,
-          deleted_at ${ts2} NOT NULL,
-          deleted_by TEXT NOT NULL,
-          UNIQUE(org_id, name)
-        );
-        CREATE INDEX IF NOT EXISTS idx_deleted_bot_names_org ON deleted_bot_names(org_id);
-      `);
-    });
-
     // #133: Bot join approval mechanism
     await this.runMigration('bot_join_approval', async () => {
       const ts2 = this.driver.dialect === 'postgres' ? 'BIGINT' : 'INTEGER';
@@ -1049,7 +1033,7 @@ export class HubDB {
     webhookSecret?: string | null,
     profile?: BotProfileInput,
     authRole: AuthRole = 'member',
-  ): Promise<{ bot: Bot; plaintextToken: string } | { conflict: 'NAME_TOMBSTONED' | 'NAME_CONFLICT' }> {
+  ): Promise<{ bot: Bot; plaintextToken: string } | { conflict: 'NAME_CONFLICT' }> {
     // Pre-compute all pure values outside the transaction (no DB side-effects)
     const now = Date.now();
     const serializedProfile = this.serializeProfileFields(profile);
@@ -1088,24 +1072,12 @@ export class HubDB {
     // Sentinel errors thrown inside the transaction to force ROLLBACK before handling.
     // Must throw (not return) so PostgreSQL issues ROLLBACK on a caught constraint error
     // rather than attempting COMMIT on an aborted transaction.
-    class NameTombstonedError extends Error {
-      constructor() { super('NAME_TOMBSTONED'); }
-    }
     class NameConflictError extends Error {
       constructor() { super('NAME_CONFLICT'); }
     }
 
     try {
       await this.driver.transaction(async (txn) => {
-        // Tombstone check inside transaction: prevents TOCTOU where a concurrent
-        // deleteBotWithTombstone() could commit between this check and the INSERT,
-        // leaving a tombstoned name registered in the bots table.
-        const tombstoneRow = await txn.get<any>(
-          'SELECT 1 FROM deleted_bot_names WHERE org_id = ? AND name = ?',
-          [orgId, name],
-        );
-        if (tombstoneRow) throw new NameTombstonedError();
-
         // Existing-bot check inside transaction: prevents concurrent registrations
         // for the same name from both passing the pre-INSERT guard.
         const existingRow = await txn.get<any>(
@@ -1147,7 +1119,6 @@ export class HubDB {
 
       return { bot, plaintextToken };
     } catch (err) {
-      if (err instanceof NameTombstonedError) return { conflict: 'NAME_TOMBSTONED' as const };
       if (err instanceof NameConflictError) return { conflict: 'NAME_CONFLICT' as const };
       throw err;
     }
@@ -1175,7 +1146,7 @@ export class HubDB {
     joinStatus: 'pending' | 'active' = 'active',
   ): Promise<
     | { bot: Bot; plaintextToken: string }
-    | { conflict: 'NAME_CONFLICT' | 'TICKET_CONSUMED' | 'NAME_TOMBSTONED' }
+    | { conflict: 'NAME_CONFLICT' | 'TICKET_CONSUMED' }
   > {
     // Pre-compute all pure values outside the transaction (no DB side-effects)
     const plaintextToken = `bot_${crypto.randomBytes(24).toString('hex')}`;
@@ -1224,9 +1195,6 @@ export class HubDB {
     class NameConflictError extends Error {
       constructor() { super('NAME_CONFLICT'); }
     }
-    class TombstonedError extends Error {
-      constructor() { super('NAME_TOMBSTONED'); }
-    }
     class TicketConsumedError extends Error {
       constructor() { super('TICKET_CONSUMED'); }
     }
@@ -1241,15 +1209,6 @@ export class HubDB {
         if (!ticketRow) {
           // Throw (not return) so the driver issues ROLLBACK before we handle the conflict.
           throw new TicketConsumedError();
-        }
-
-        // Step 1b: Check tombstone inside transaction to avoid TOCTOU on name reservation
-        const tombstoneRow = await txn.get<any>(
-          'SELECT 1 FROM deleted_bot_names WHERE org_id = ? AND name = ?',
-          [orgId, name],
-        );
-        if (tombstoneRow) {
-          throw new TombstonedError();
         }
 
         // Step 2: INSERT bot — UNIQUE(org_id, name) will fire on name conflict.
@@ -1298,7 +1257,6 @@ export class HubDB {
       return { bot: botObj, plaintextToken };
     } catch (err) {
       if (err instanceof NameConflictError) return { conflict: 'NAME_CONFLICT' as const };
-      if (err instanceof TombstonedError) return { conflict: 'NAME_TOMBSTONED' as const };
       if (err instanceof TicketConsumedError) return { conflict: 'TICKET_CONSUMED' as const };
       throw err;
     }
@@ -1368,20 +1326,14 @@ export class HubDB {
     return this.getBotById(botId);
   }
 
-  async renameBot(botId: string, newName: string): Promise<{ bot: Bot; conflict: false } | { bot: undefined; conflict: 'NAME_CONFLICT' | 'NAME_TOMBSTONED' }> {
-    class NameTombstonedError extends Error { constructor() { super('NAME_TOMBSTONED'); } }
+  async renameBot(botId: string, newName: string): Promise<{ bot: Bot; conflict: false } | { bot: undefined; conflict: 'NAME_CONFLICT' }> {
     class NameConflictError extends Error { constructor() { super('NAME_CONFLICT'); } }
 
     try {
       await this.driver.transaction(async (txn) => {
         const botRow = await txn.get<any>('SELECT org_id FROM bots WHERE id = ?', [botId]);
-        // If the bot was concurrently deleted, abort rather than silently skip tombstone check
+        // If the bot was concurrently deleted, abort rather than silently report success.
         if (!botRow) throw new Error('BOT_NOT_FOUND');
-        const tombstoneRow = await txn.get<any>(
-          'SELECT 1 FROM deleted_bot_names WHERE org_id = ? AND name = ?',
-          [botRow.org_id, newName],
-        );
-        if (tombstoneRow) throw new NameTombstonedError();
         try {
           // Include org_id in WHERE for defense-in-depth (ensures we only rename the bot
           // within its own org even if botId is somehow wrong)
@@ -1397,7 +1349,6 @@ export class HubDB {
         }
       });
     } catch (err) {
-      if (err instanceof NameTombstonedError) return { bot: undefined, conflict: 'NAME_TOMBSTONED' };
       if (err instanceof NameConflictError) return { bot: undefined, conflict: 'NAME_CONFLICT' };
       throw err;
     }
@@ -1543,33 +1494,16 @@ export class HubDB {
   }
 
   /**
-   * Atomically tombstone a bot's name and delete the bot in a single transaction.
-   *
-   * All four steps execute inside one transaction:
-   *   1. INSERT tombstone (deleted_bot_names) — name reserved immediately
-   *   2. Close any threads where this bot is the sole participant
-   *   3. Delete channel memberships
-   *   4. Delete the bot row
+   * Atomically clean up and delete a bot in a single transaction.
    *
    * Either all steps succeed or the transaction rolls back, leaving the bot
-   * and tombstone state unchanged. This eliminates the race window that would
-   * exist if tombstone and delete were separate sequential operations (#199 A1).
+   * and related membership/thread state unchanged.
    */
-  async deleteBotWithTombstone(botId: string, name: string, orgId: string, deletedBy: string): Promise<void> {
+  async deleteBotWithCleanup(botId: string): Promise<void> {
     await this.driver.transaction(async (txn) => {
       const now = Date.now();
 
-      // Step 1: Tombstone name first so concurrent registrations are blocked
-      // immediately. UPSERT is idempotent if the name was already tombstoned.
-      const tombstoneId = crypto.randomUUID();
-      await txn.run(
-        `INSERT INTO deleted_bot_names (id, org_id, name, deleted_at, deleted_by)
-         VALUES (?, ?, ?, ?, ?)
-         ON CONFLICT(org_id, name) DO UPDATE SET deleted_at = excluded.deleted_at, deleted_by = excluded.deleted_by`,
-        [tombstoneId, orgId, name, now, deletedBy],
-      );
-
-      // Step 2: Auto-close threads where this bot is the sole remaining participant
+      // Step 1: Auto-close threads where this bot is the sole remaining participant
       // (ON DELETE CASCADE would orphan them, making them inaccessible via API)
       const soloThreads = await txn.all<{ thread_id: string }>(`
         SELECT tp.thread_id FROM thread_participants tp
@@ -1583,51 +1517,12 @@ export class HubDB {
         `, [now, now, thread_id]);
       }
 
-      // Step 3: Remove channel memberships
+      // Step 2: Remove channel memberships
       await txn.run('DELETE FROM channel_members WHERE bot_id = ?', [botId]);
 
-      // Step 4: Delete the bot row
+      // Step 3: Delete the bot row
       await txn.run('DELETE FROM bots WHERE id = ?', [botId]);
     });
-  }
-
-  /**
-   * Record a bot name as tombstoned after deletion to prevent re-registration.
-   * Uses upsert so a re-delete of the same name (edge case) is idempotent.
-   *
-   * @deprecated All standard delete paths now use deleteBotWithTombstone() which
-   * performs tombstoning atomically inside a transaction. This method remains for
-   * direct use in tests or administrative tooling where a transaction is not needed.
-   */
-  async tombstoneBotName(orgId: string, name: string, deletedBy: string): Promise<void> {
-    const id = crypto.randomUUID();
-    await this.driver.run(
-      `INSERT INTO deleted_bot_names (id, org_id, name, deleted_at, deleted_by)
-       VALUES (?, ?, ?, ?, ?)
-       ON CONFLICT(org_id, name) DO UPDATE SET deleted_at = excluded.deleted_at, deleted_by = excluded.deleted_by`,
-      [id, orgId, name, Date.now(), deletedBy],
-    );
-  }
-
-  /** Returns true if the given (org_id, name) is tombstoned. */
-  async isBotNameTombstoned(orgId: string, name: string): Promise<boolean> {
-    const row = await this.driver.get<any>(
-      'SELECT 1 FROM deleted_bot_names WHERE org_id = ? AND name = ?',
-      [orgId, name],
-    );
-    return !!row;
-  }
-
-  /**
-   * Release a tombstone so the name can be re-registered.
-   * Returns true if a tombstone was found and cleared, false if none existed.
-   */
-  async clearBotNameTombstone(orgId: string, name: string): Promise<boolean> {
-    const result = await this.driver.run(
-      'DELETE FROM deleted_bot_names WHERE org_id = ? AND name = ?',
-      [orgId, name],
-    );
-    return result.changes > 0;
   }
 
   // ─── Bot Token Operations (Scoped Tokens) ─────────────
