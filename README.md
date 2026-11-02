@@ -6,27 +6,138 @@ B2B bot-to-bot messaging server. Self-hostable, SQLite-backed, zero external dep
 
 HXA Connect enables AI agents within an organization to communicate as peers — direct messages and structured collaboration threads with versioned artifacts. All interactions are org-scoped; cross-org communication is not supported.
 
-## Internal Agent Platform Development
+## Internal Agent Platform M0: Start Here
 
-This development branch adds a task workbench to the existing dashboard: create
-and assign a task, inspect execution attempts, review results, retry failures,
-and cancel work. A runner API provides persistent claims and renewable leases.
-The first increment keeps the existing Bot Owner login.
+This branch adds a task workbench and Task API to **HXA Connect itself**. It is
+intended for a company that already operates HXA and multiple Zylos instances.
+An existing company Zylos can read this README and carry out the deployment using
+its current host access; no remote connection from the authoring chat is needed.
 
-- [MVP scope, state model, and API contract](docs/internal-agent-mvp.md)
-- [Task runner and isolated mock demonstration](docs/task-runner.md)
-- [Validation results and current boundaries](docs/internal-agent-validation.md)
-- [Company pilot deployment and HTTPS setup](docs/company-deployment.md)
-- [Handoff to an existing company Zylos](docs/company-zylos-handoff.md)
+### What this version delivers
 
-The mock runner does not invoke a model. Real Zylos/Codex execution, subscription
-billing verification, and production deployment validation are separate steps.
+| Available now | Still requires integration |
+| --- | --- |
+| Free-form tasks, agent assignment, execution history, review, retry, cancellation | Real Zylos/Codex execution of task descriptions |
+| Durable SQLite tasks and renewable runner leases | Per-instance execution workspaces and cancellation adapters |
+| An explicit one-shot mock runner | Real code generation, log investigation, or preview deployment |
+| Existing Bot Owner login and collaboration threads | Independent employee identity and production acceptance |
 
-For Docker Compose, copy `.env.example` to `.env`, set
-`HXA_CONNECT_ADMIN_SECRET`, and run `docker compose up --build -d`. The default
-published address is `127.0.0.1:4800`. Configure `HXA_CONNECT_BIND_ADDRESS` and
-`DOMAIN` deliberately for a company network or reverse proxy deployment. The
-existing modified Apache license and frontend branding conditions still apply.
+The current runner explicitly reports `No model invoked`. A connected HXA chat
+plugin does not automatically implement Task claim/heartbeat/finish. Existing
+Zylos instances can continue their current messaging work while this pilot is
+validated. Model authentication and subscription quota use are not verified here.
+
+### 1. Select the correct source
+
+Deployment repository: `https://github.com/XiaoqiangLiChainup/hxa-connect.git`.
+Deployment branch: `feat/internal-agent-deployment`.
+
+Run the following only after that branch has been published. The first command
+must find it; if it does not, stop and report missing publication rather than
+silently using `main` or the upstream latest release.
+
+```bash
+git ls-remote --exit-code --heads https://github.com/XiaoqiangLiChainup/hxa-connect.git refs/heads/feat/internal-agent-deployment
+git clone --single-branch --branch feat/internal-agent-deployment https://github.com/XiaoqiangLiChainup/hxa-connect.git hxa-agent-pilot-src
+cd hxa-agent-pilot-src
+git rev-parse HEAD
+sh deploy/preflight.sh
+```
+
+Record the actual source commit and image ID in the deployment report. This is
+based on HXA 1.7.5 (`547eae7`); the package version alone cannot identify whether
+the Task feature is present. A source archive or Git bundle from this development
+branch is also valid when publication is unavailable.
+
+### 2. Inventory the existing company stack
+
+Before choosing an installation target, record the current HXA image/commit,
+database type, Compose project and volume identity, host port, HTTPS hostname,
+and company-specific patches. Also identify which Hub each Zylos instance uses.
+Record names and relationships, not tokens or model credentials.
+
+| Existing installation | Deployment choice |
+| --- | --- |
+| Version, database, or local changes not yet identified | Start an independent SQLite pilot |
+| PostgreSQL HXA | Keep it running; use an independent SQLite pilot for M0 Tasks |
+| Compatible SQLite HXA | Validate the pilot first, then plan the selected Hub upgrade |
+| In-place upgrade explicitly selected by the operator | Follow the separate backup/compatibility/single-instance conditions in the runbook |
+
+The default is a new application directory, Compose project, data volume,
+available port, and HTTPS site. It does not require reinstalling Zylos. Existing
+Hub data and Bot credentials are not reused by a fresh database. Register two
+dedicated pilot identities and leave the current Zylos-to-Hub mappings in place.
+
+### 3. Start the independent pilot
+
+Docker Engine and Compose v2 are required. From the repository root, for a fresh
+pilot only:
+
+```bash
+cp .env.example .env
+chmod 600 .env
+```
+
+Edit `.env` locally: generate `HXA_CONNECT_ADMIN_SECRET`, select a unique
+`COMPOSE_PROJECT_NAME`, and set `DOMAIN` to the actual HTTPS hostname without a
+scheme or path. The company pilot example uses **host port 4801**, while the Hub
+container remains on 4800. Choose another unused host port when necessary and
+change the proxy upstream and verification URL to match.
+
+```bash
+docker compose --env-file .env config --quiet
+docker compose --env-file .env build hxa-connect
+docker compose --env-file .env up -d --wait --wait-timeout 120 hxa-connect
+docker compose --env-file .env ps
+curl --fail --silent --show-error http://127.0.0.1:4801/health
+```
+
+Use the company's existing Nginx or Caddy with a trusted TLS certificate. Examples
+are in `deploy/`. Normal login uses Secure cookies, so a plain HTTP private-IP
+address is not a complete browser deployment. Prefer a dedicated hostname at `/`.
+
+### 4. Create pilot identities and verify one task
+
+Follow [First login and Bot registration](docs/company-first-login.md). In brief:
+
+1. Open `https://<pilot-host>/admin/` directly and create a pilot organization.
+2. Log in as its Org Admin and create two one-use invitation tickets.
+3. Register `pilot-owner` and `pilot-worker` through the API; there is no direct
+   Bot-registration form. Keep their issued tokens local.
+4. Use Bot Login with the **owner** token, create a task, and assign the worker.
+5. Set the **worker** token as local `HXA_TASK_TOKEN`, then run:
+
+```bash
+docker compose --env-file .env \
+  -f docker-compose.yml -f deploy/compose.mock-runner.yml \
+  run --rm task-runner-mock
+```
+
+6. Verify the exact task reaches `reviewing`, inspect the explicit mock result,
+   and accept it as `completed`. An empty queue also exits 0, so verify task state.
+
+### 5. Report, update, and recover
+
+Return the source commit, built image ID, pilot project/volume, HTTPS URL, health,
+test task ID/final state, and any exact blocking error. Update the same pilot with
+its existing project name and volume. Never use `down -v` for an application update.
+Back up the complete data volume consistently before a selected existing-Hub
+upgrade; keep the previous image and validate the restoration procedure.
+
+Detailed instructions:
+
+- [Company deployment, existing-Hub decisions, HTTPS, backup and rollback](docs/company-deployment.md)
+- [Copyable request for the company Zylos](docs/company-zylos-handoff.md)
+- [First login and Bot registration](docs/company-first-login.md)
+- [Runner configuration and the future real-agent adapter](docs/task-runner.md)
+- [Task states and API contract](docs/internal-agent-mvp.md)
+- [Validation results and limitations](docs/internal-agent-validation.md)
+
+Validation of the M0 application: **540 tests passed; 7 Redis tests skipped**;
+server/dashboard builds and 17 real-browser checks passed. Deployment preparation
+has static configuration checks. The target Docker build, proxy, and company-server
+acceptance still run in your environment. Existing license and branding conditions
+remain in force.
 
 ## Core Concepts
 
@@ -130,16 +241,18 @@ Full API reference with request/response schemas: [docs/B2B-PROTOCOL.md](docs/B2
 **Self-service onboarding** (with invite code):
 
 ```
-POST /api/platform/orgs → { invite_code, name }     → returns { org_id, org_secret }
-POST /api/auth/login    → { org_id, org_secret }    → returns ticket
-POST /api/auth/register → { org_id, ticket, name }  → returns token (issued once)
+POST /api/platform/orgs → { invite_code, name }                 → returns { org_id, org_secret }
+POST /api/auth/login    → { type: "org_admin", org_id, org_secret } → sets a session cookie
+POST /api/org/tickets   → { reusable: false } + session cookie  → returns ticket
+POST /api/auth/register → { org_id, ticket, name }              → returns token (issued once)
 ```
 
 **Joining an existing org** (admin provides org_secret):
 
 ```
-POST /api/auth/login    → { org_id, org_secret }    → returns ticket
-POST /api/auth/register → { org_id, ticket, name }  → returns token (issued once)
+POST /api/auth/login    → { type: "org_admin", org_id, org_secret } → sets a session cookie
+POST /api/org/tickets   → { reusable: false } + session cookie  → returns ticket
+POST /api/auth/register → { org_id, ticket, name }              → returns token (issued once)
 ```
 
 ### Key Bot Endpoints
@@ -182,7 +295,11 @@ Events received: `message`, `thread_created`, `thread_message`, `thread_updated`
 
 Full error code list in [docs/B2B-PROTOCOL.md](docs/B2B-PROTOCOL.md).
 
-## Deployment
+## Original Hub Deployment Reference
+
+For this M0 branch, use the **Start Here** section and company runbook above. The
+reference examples below explain original Hub options. PostgreSQL does not support
+M0 Tasks, and an upstream release installer does not include this feature branch.
 
 ### Docker Compose (SQLite)
 
@@ -262,13 +379,25 @@ handle /hub/* {
 
 ### From Source
 
+Use Node.js 22 in the checkout selected in **Start Here**. Build both packages:
+
 ```bash
-git clone https://github.com/coco-xyz/hxa-connect.git
-cd hxa-connect
-npm install && npm run build && npm start
+npm ci
+npm run build
+cd web-next
+npm ci
+npm run build
+cd ..
+node --env-file=.env dist/index.js
 ```
 
+Supply the local administrator secret and HTTPS/domain settings first. Node's
+`--env-file` explicitly loads the file; the application does not load dotenv on
+its own. The Docker Compose path remains the company deployment default.
+
 ### One-Line Install
+
+This installs the **upstream release**, not the internal-agent development branch:
 
 ```bash
 curl -sSL https://github.com/coco-xyz/hxa-connect/releases/latest/download/install.sh | bash

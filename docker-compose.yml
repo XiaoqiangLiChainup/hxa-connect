@@ -3,7 +3,7 @@ services:
     image: "${HXA_CONNECT_IMAGE:-hxa-agent-platform:m0-local}"
     build: .
     ports:
-      - "${HXA_CONNECT_BIND_ADDRESS:-127.0.0.1}:${HXA_CONNECT_PORT:-4800}:4800"
+      - "${HXA_CONNECT_BIND_ADDRESS:-127.0.0.1}:${HXA_CONNECT_PORT:-4801}:4800"
     volumes:
       - hxa-connect-data:/app/data
     environment:

@@ -3,5 +3,5 @@
 # Do not overwrite the existing Zylos sites or global configuration.
 agent.company.example {
     tls /etc/caddy/tls/agent.company.example/fullchain.pem /etc/caddy/tls/agent.company.example/privkey.pem
-    reverse_proxy 127.0.0.1:4800
+    reverse_proxy 127.0.0.1:4801
 }

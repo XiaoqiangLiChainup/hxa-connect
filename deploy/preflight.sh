@@ -37,7 +37,7 @@ if command -v node >/dev/null 2>&1; then node --version; fi
 if command -v zylos >/dev/null 2>&1; then zylos --version; fi
 
 if command -v ss >/dev/null 2>&1; then
-  printf '== Existing TCP listener on example port 4800 ==\n'
-  ss -ltn '( sport = :4800 )' 2>/dev/null || true
+  printf '== Existing TCP listeners on common Hub/pilot ports 4800 and 4801 ==\n'
+  ss -ltn '( sport = :4800 or sport = :4801 )' 2>/dev/null || true
 fi
 printf 'No services were installed, upgraded, restarted, or reconfigured.\n'
