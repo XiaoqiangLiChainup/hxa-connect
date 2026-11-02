@@ -16,6 +16,7 @@ import type { SessionStore } from './session.js';
 import { generateSessionId, SESSION_TTL, SESSION_LIMIT, SESSION_COOKIE } from './session.js';
 import { checkLoginRateLimit, recordLoginFailure } from './rate-limit.js';
 import { generateSkillMd } from './skill-md.js';
+import { createTaskRouter } from './platform/routes.js';
 
 /**
  * Express 4 does not forward rejected promises from async route handlers to
@@ -1365,6 +1366,7 @@ export function createRouter(db: HubDB, ws: HubWS, config: HubConfig, sessionSto
 
   const auth = wrapAsyncRouter(Router());
   auth.use(authMiddleware(db));
+  auth.use('/api/tasks', createTaskRouter(db));
 
   /**
    * GET /api/org — Get current org info

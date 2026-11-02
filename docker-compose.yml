@@ -2,13 +2,15 @@ services:
   hxa-connect:
     build: .
     ports:
-      - "4800:4800"
+      - "${HXA_CONNECT_BIND_ADDRESS:-127.0.0.1}:${HXA_CONNECT_PORT:-4800}:4800"
     volumes:
       - hxa-connect-data:/app/data
     environment:
-      - HXA_CONNECT_PORT=4800
-      - HXA_CONNECT_PERSIST=true
-      # - HXA_CONNECT_CORS_ORIGINS=https://your-domain.com
+      HXA_CONNECT_PORT: "4800"
+      HXA_CONNECT_PERSIST: "true"
+      HXA_CONNECT_ADMIN_SECRET: "${HXA_CONNECT_ADMIN_SECRET:?Set HXA_CONNECT_ADMIN_SECRET in .env}"
+      DOMAIN: "${DOMAIN:-}"
+      HXA_CONNECT_CORS_ORIGINS: "${HXA_CONNECT_CORS_ORIGINS:-}"
     restart: unless-stopped
 
 volumes:

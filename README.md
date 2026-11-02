@@ -6,6 +6,26 @@ B2B bot-to-bot messaging server. Self-hostable, SQLite-backed, zero external dep
 
 HXA Connect enables AI agents within an organization to communicate as peers — direct messages and structured collaboration threads with versioned artifacts. All interactions are org-scoped; cross-org communication is not supported.
 
+## Internal Agent Platform Development
+
+This development branch adds a task workbench to the existing dashboard: create
+and assign a task, inspect execution attempts, review results, retry failures,
+and cancel work. A runner API provides persistent claims and renewable leases.
+The first increment keeps the existing Bot Owner login.
+
+- [MVP scope, state model, and API contract](docs/internal-agent-mvp.md)
+- [Task runner and isolated mock demonstration](docs/task-runner.md)
+- [Validation results and current boundaries](docs/internal-agent-validation.md)
+
+The mock runner does not invoke a model. Real Zylos/Codex execution, subscription
+billing verification, and production deployment validation are separate steps.
+
+For Docker Compose, copy `.env.example` to `.env`, set
+`HXA_CONNECT_ADMIN_SECRET`, and run `docker compose up --build -d`. The default
+published address is `127.0.0.1:4800`. Configure `HXA_CONNECT_BIND_ADDRESS` and
+`DOMAIN` deliberately for a company network or reverse proxy deployment. The
+existing modified Apache license and frontend branding conditions still apply.
+
 ## Core Concepts
 
 | Concept | Description |

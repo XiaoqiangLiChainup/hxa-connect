@@ -18,7 +18,7 @@ function LanguageSwitcher() {
   return (
     <button
       onClick={() => setLocale(locale === 'en' ? 'zh' : 'en')}
-      className="text-sm px-2 py-1 rounded hover:bg-hxa-bg-hover transition-colors text-hxa-text-dim hover:text-hxa-text"
+      className="shrink-0 text-sm px-2 py-1 rounded hover:bg-hxa-bg-hover transition-colors text-hxa-text-dim hover:text-hxa-text"
       title={locale === 'en' ? t('header.langSwitch.titleZh') : t('header.langSwitch.titleEn')}
     >
       {locale === 'en' ? t('header.langSwitch.zh') : t('header.langSwitch.en')}
@@ -38,23 +38,24 @@ export function Header({ onMenuToggle, wsConnected }: HeaderProps) {
   }
 
   return (
-    <header className="glass theme-header border-b border-hxa-border flex items-center px-5 max-md:px-3 gap-4 max-md:gap-2 h-14 max-md:h-12 shrink-0 z-10">
+    <header className="glass theme-header border-b border-hxa-border flex min-w-0 items-center px-5 max-md:px-2 gap-4 max-md:gap-1 h-14 max-md:h-12 shrink-0 z-10">
       {/* Mobile menu button */}
       <button
         onClick={onMenuToggle}
-        className="md:hidden text-hxa-text-dim hover:text-hxa-text p-1"
+        aria-label={t('header.toggleNavigation')}
+        className="md:hidden shrink-0 text-hxa-text-dim hover:text-hxa-text p-1"
       >
         <Menu size={20} />
       </button>
 
       {/* Brand */}
-      <div className="flex items-center gap-2 text-hxa-text font-semibold">
-        <img src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/images/logo.png`} alt="HXA-Connect" className="h-5" />
-        <span className="font-semibold text-[15px] max-md:max-w-[100px] max-md:truncate">{session?.org_name || 'HXA-Connect'}</span>
+      <div className="flex min-w-0 max-md:flex-1 items-center gap-2 text-hxa-text font-semibold">
+        <img src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/images/logo.png`} alt="HXA-Connect" className="h-5 shrink-0" />
+        <span className="min-w-0 truncate font-semibold text-[15px] max-md:max-w-[100px]">{session?.org_name || 'HXA-Connect'}</span>
       </div>
 
       {/* Spacer */}
-      <div className="flex-1" />
+      <div className="hidden md:block md:flex-1" />
 
       {/* WS status — hidden on mobile */}
       {wsConnected !== undefined && (
@@ -66,19 +67,20 @@ export function Header({ onMenuToggle, wsConnected }: HeaderProps) {
 
       {/* Language Switcher */}
       <LanguageSwitcher />
-      <ThemeSwitcher />
+      <div className="shrink-0"><ThemeSwitcher /></div>
 
       {/* Session info */}
       {session && (
-        <div className="flex items-center gap-2 max-md:gap-1.5">
-          <div className="text-xs font-mono flex items-center gap-1.5 text-hxa-text-dim theme-input px-2.5 py-1.5 rounded-full border border-hxa-border">
+        <div className="flex shrink-0 items-center gap-2 max-md:gap-1">
+          <div className="text-xs font-mono flex min-w-0 max-md:max-w-[72px] items-center gap-1.5 max-md:gap-1 text-hxa-text-dim theme-input px-2.5 max-md:px-1.5 py-1.5 rounded-full border border-hxa-border">
             <span className="w-2 h-2 rounded-full inline-block shadow-[0_0_6px_currentColor] bg-hxa-green text-hxa-green shrink-0" />
-            <span className="truncate max-w-[60px] sm:max-w-none">{session.owner_name}</span>
-            <span className="text-hxa-text-muted truncate max-w-[80px] sm:max-w-none">{session.bot?.name ?? ''}</span>
+            <span className="min-w-0 truncate max-w-[48px] md:max-w-none">{session.owner_name}</span>
+            <span className="hidden md:inline text-hxa-text-muted truncate">{session.bot?.name ?? ''}</span>
           </div>
           <button
             onClick={() => setShowLogoutConfirm(true)}
-            className="text-hxa-text-dim hover:text-hxa-red transition-colors inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs"
+            aria-label={t('header.logout')}
+            className="shrink-0 text-hxa-text-dim hover:text-hxa-red transition-colors inline-flex items-center gap-1.5 px-2.5 max-md:px-2 py-1.5 text-xs"
           >
             <LogOut size={14} />
             <span className="hidden sm:inline">{t('header.logout')}</span>

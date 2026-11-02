@@ -1,11 +1,10 @@
 'use client';
 
-import { useSession } from '@/hooks/useSession';
-import { MessageSquare, Mail, X } from 'lucide-react';
+import { ClipboardList, MessageSquare, Mail, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTranslations } from '@/i18n/context';
 
-type Tab = 'threads' | 'dms';
+type Tab = 'threads' | 'dms' | 'tasks';
 
 interface SidebarProps {
   open: boolean;
@@ -18,6 +17,7 @@ interface SidebarProps {
 export function Sidebar({ open, onClose, activeTab, onTabChange, children }: SidebarProps) {
   const { t } = useTranslations();
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
+    { id: 'tasks', label: t('sidebar.tasks'), icon: <ClipboardList size={14} aria-hidden="true" /> },
     { id: 'threads', label: t('sidebar.threads'), icon: <MessageSquare size={14} /> },
     { id: 'dms', label: t('sidebar.dms'), icon: <Mail size={14} /> },
   ];
@@ -37,21 +37,28 @@ export function Sidebar({ open, onClose, activeTab, onTabChange, children }: Sid
         )}
       >
         {/* Mobile close button */}
-        <button
-          onClick={onClose}
-          className="md:hidden absolute top-3 right-3 text-hxa-text-dim hover:text-hxa-text p-1"
-        >
-          <X size={18} />
-        </button>
+        <div className="flex min-h-12 items-center justify-between border-b border-hxa-border px-3 md:hidden">
+          <span className="text-sm font-medium text-hxa-text">{t('sidebar.navigation')}</span>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t('sidebar.close')}
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-hxa-text-dim hover:bg-hxa-bg-hover hover:text-hxa-text focus-visible:outline-2 focus-visible:outline-hxa-accent"
+          >
+            <X size={18} aria-hidden="true" />
+          </button>
+        </div>
 
         {/* Tabs */}
         <div className="flex shrink-0 border-b border-hxa-border theme-input">
           {tabs.map((tab) => (
             <button
               key={tab.id}
+              type="button"
+              aria-current={activeTab === tab.id ? 'page' : undefined}
               onClick={() => onTabChange(tab.id)}
               className={cn(
-                'flex-1 py-3.5 text-center text-sm font-semibold relative transition-colors',
+                'flex-1 py-3.5 text-center text-sm font-semibold relative transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-hxa-accent',
                 activeTab === tab.id
                   ? 'text-hxa-accent'
                   : 'text-hxa-text-dim hover:text-hxa-text hover:bg-hxa-bg-hover',

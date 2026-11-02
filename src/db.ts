@@ -1,5 +1,6 @@
 import type { DatabaseDriver } from './db/driver.js';
 import crypto from 'node:crypto';
+import { PlatformTaskStore } from './platform/store.js';
 import type {
   Org,
   Bot,
@@ -58,7 +59,11 @@ export class HubDB {
     return this.driver.dialect === 'postgres' ? 'id' : 'rowid';
   }
 
-  constructor(private driver: DatabaseDriver) {}
+  readonly tasks: PlatformTaskStore;
+
+  constructor(private driver: DatabaseDriver) {
+    this.tasks = new PlatformTaskStore(driver);
+  }
 
   async init(): Promise<void> {
     // Dialect-specific DDL fragments
@@ -519,6 +524,7 @@ export class HubDB {
         `);
       } catch { /* may fail on some DB versions */ }
     });
+    await this.tasks.init();
   }
 
   /**
@@ -3570,6 +3576,7 @@ export class HubDB {
   }
 
   async close(): Promise<void> {
+    this.tasks.close();
     await this.driver.close();
   }
 }
