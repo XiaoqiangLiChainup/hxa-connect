@@ -8,11 +8,13 @@ import { Header } from '@/components/layout/Header';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { ThreadList } from '@/components/thread/ThreadList';
 import { DMList } from '@/components/dm/DMList';
+import { TaskSidebar } from '@/components/tasks/TaskSidebar';
 import type { WsEvent, Thread, ThreadMessage, ThreadStatus, Artifact, DmMessage, Channel } from '@/lib/types';
 
-type Tab = 'threads' | 'dms';
+type Tab = 'threads' | 'dms' | 'tasks';
 
 function tabFromPath(pathname: string): Tab {
+  if (pathname.includes('/tasks')) return 'tasks';
   if (pathname.includes('/dms')) return 'dms';
   return 'threads';
 }
@@ -133,6 +135,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     const next = getLocationRoute();
     setNavRoute({ section: next.section, id: next.id });
     setActiveTab(tabFromPath(next.path));
+    setSidebarOpen(false);
     setWsMessages([]);
     setWsDmMessages([]);
     setWsArtifacts([]);
@@ -227,6 +230,10 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   }, [syncFromCurrentLocation]);
 
   function handleTabChange(tab: Tab) {
+    if (tab === 'tasks') {
+      navigate('/dashboard/tasks/');
+      return;
+    }
     navigate(tab === 'dms' ? '/dashboard/dms/' : '/dashboard/');
   }
 
@@ -242,6 +249,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   const sidebarContent = (() => {
     switch (activeTab) {
+      case 'tasks':
+        return <TaskSidebar />;
       case 'threads':
         return <ThreadList wsThreads={wsThreads} />;
       case 'dms':

@@ -1,5 +1,18 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- Internal task workbench for free-form goals, agent assignment, execution history, result acceptance, retry, and cancellation.
+- SQLite-backed task and run API with idempotent creation, renewable leases, one running task per bot, and explicit review before completion.
+- Explicit mock runner, isolated local demonstration, and a documented adapter interface for later Zylos/Codex integration.
+- Dashboard build gate in CI and development configuration for Docker Compose.
+- Company pilot deployment runbook, read-only environment inventory, HTTPS proxy examples, and an explicit one-shot mock runner Compose overlay.
+
+### Fixed
+- Serialize SQLite connection access across asynchronous transactions and independent session operations; reject unsupported parallel nested access.
+- Include task runner scripts in the runtime image, provide native SQLite dependency build fallback, and add a Hub container health check.
+
 ## [1.7.5] - 2026-05-16
 
 ### Fixed

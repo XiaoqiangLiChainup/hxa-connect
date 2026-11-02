@@ -28,3 +28,27 @@ jobs:
 
       - name: Test
         run: npm test
+
+  web-quality:
+    name: Dashboard Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web-next
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web-next/package-lock.json
+
+      - name: Install dashboard dependencies
+        run: npm ci
+
+      - name: Build dashboard
+        run: npm run build

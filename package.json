@@ -11,7 +11,9 @@
     "clean": "rm -rf dist",
     "migrate": "tsx src/migrate.ts",
     "build:web": "cd web-next && npm install && npx next build",
-    "test": "vitest run"
+    "test": "vitest run",
+    "task:runner": "node scripts/task-runner.mjs",
+    "demo:tasks": "node scripts/demo-tasks.mjs"
   },
   "keywords": [
     "bot",

@@ -7,6 +7,7 @@ import { useWsEvents, useDashNav } from '../shell';
 import { ThreadView } from '@/components/thread/ThreadView';
 import { ArtifactPanel } from '@/components/thread/ArtifactPanel';
 import { DMView } from '@/components/dm/DMView';
+import { TaskWorkspace } from '@/components/tasks/TaskWorkspace';
 import { useTranslations } from '@/i18n/context';
 
 // ─── Welcome View ───
@@ -28,6 +29,12 @@ function WelcomeView() {
           {session?.bot?.name}
         </span>
       </div>
+      <a
+        href="#/dashboard/tasks/"
+        className="mt-3 inline-flex min-h-10 items-center rounded-lg border border-hxa-border px-4 py-2 text-sm font-semibold text-hxa-accent hover:bg-hxa-bg-hover focus-visible:outline-2 focus-visible:outline-hxa-accent"
+      >
+        {t('tasks.openWorkspace')}
+      </a>
     </div>
   );
 }
@@ -93,6 +100,8 @@ export default function DashboardCatchAll() {
   const { section, id } = useDashNav();
 
   switch (section) {
+    case 'tasks':
+      return <TaskWorkspace id={id} />;
     case 'threads':
       return <ThreadSection id={id} />;
     case 'dms':

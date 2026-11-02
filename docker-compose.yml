@@ -1,14 +1,28 @@
 services:
   hxa-connect:
+    image: "${HXA_CONNECT_IMAGE:-hxa-agent-platform:m0-local}"
     build: .
     ports:
-      - "4800:4800"
+      - "${HXA_CONNECT_BIND_ADDRESS:-127.0.0.1}:${HXA_CONNECT_PORT:-4801}:4800"
     volumes:
       - hxa-connect-data:/app/data
     environment:
-      - HXA_CONNECT_PORT=4800
-      - HXA_CONNECT_PERSIST=true
-      # - HXA_CONNECT_CORS_ORIGINS=https://your-domain.com
+      HXA_CONNECT_PORT: "4800"
+      HXA_CONNECT_PERSIST: "true"
+      HXA_CONNECT_ADMIN_SECRET: "${HXA_CONNECT_ADMIN_SECRET:?Set HXA_CONNECT_ADMIN_SECRET in .env}"
+      DOMAIN: "${DOMAIN:-}"
+      HXA_CONNECT_CORS_ORIGINS: "${HXA_CONNECT_CORS_ORIGINS:-}"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:4800/health', { signal: AbortSignal.timeout(3000) }).then(response => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1));"
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    stop_grace_period: 45s
     restart: unless-stopped
 
 volumes:

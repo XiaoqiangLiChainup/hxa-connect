@@ -4,7 +4,10 @@ FROM node:22-alpine AS builder
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci
+# better-sqlite3 can compile when a prebuilt binary is unavailable.
+RUN apk add --no-cache --virtual .native-build-deps python3 make g++ && \
+    npm ci && \
+    apk del .native-build-deps
 
 COPY tsconfig.json ./
 COPY src/ ./src/
@@ -34,10 +37,15 @@ RUN addgroup -g 1001 -S hxa && \
 WORKDIR /app
 
 COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN apk add --no-cache --virtual .native-build-deps python3 make g++ && \
+    npm ci --omit=dev && \
+    npm cache clean --force && \
+    apk del .native-build-deps
 
 COPY --from=builder /app/dist ./dist
 COPY --from=web-builder /app/web-next/out ./web-next/out
+COPY scripts/task-runner.mjs scripts/demo-tasks.mjs ./scripts/
+COPY scripts/task-runner/ ./scripts/task-runner/
 
 # Data volume (writable by hxa user)
 RUN mkdir -p /app/data && chown hxa:hxa /app/data
