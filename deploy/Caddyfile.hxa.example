@@ -1,0 +1,7 @@
+# Example site block for an EXISTING Caddy instance on the Docker host.
+# Supply the actual internal hostname and company-managed certificate paths.
+# Do not overwrite the existing Zylos sites or global configuration.
+agent.company.example {
+    tls /etc/caddy/tls/agent.company.example/fullchain.pem /etc/caddy/tls/agent.company.example/privkey.pem
+    reverse_proxy 127.0.0.1:4800
+}

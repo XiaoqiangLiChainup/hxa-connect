@@ -7,6 +7,21 @@ Baseline: HXA Connect 1.7.5, commit
 
 Development branch: `feat/internal-agent-tasks`.
 
+## Deployment preparation follow-up
+
+The `feat/internal-agent-deployment` follow-up includes runner scripts in the
+runtime image, native SQLite build fallback, a Hub health check, a separate
+one-shot mock Compose overlay, HTTPS proxy templates, and company-side deployment
+instructions. The application and frontend source are unchanged from the tested
+M0 commit `8104e839764c317b70a5ef5b6c62d7ee2ddc06cc`.
+
+Both Compose YAML files, their service/environment separation, referenced runner
+paths, the preflight shell syntax, and whitespace checks passed. This is static
+configuration validation: Docker/Compose, Nginx, and Caddy executables are not
+installed in the preparation environment, so no image build, proxy configuration
+test, or company/Aliyun server deployment is claimed. The test totals below are
+the M0 application validation record.
+
 ## Result
 
 The server and dashboard build successfully. The complete automated suite reports

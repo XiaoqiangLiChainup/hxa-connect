@@ -1,0 +1,15 @@
+# Explicit simulation overlay; the base Compose file starts only the Hub.
+# Load after docker-compose.yml. No model or existing Zylos instance is invoked.
+services:
+  task-runner-mock:
+    image: "${HXA_CONNECT_IMAGE:-hxa-agent-platform:m0-local}"
+    command: ["node", "scripts/task-runner.mjs", "--mock", "--once"]
+    environment:
+      HXA_TASK_URL: "http://hxa-connect:4800"
+      HXA_TASK_TOKEN: "${HXA_TASK_TOKEN:?Set HXA_TASK_TOKEN locally to the assigned bot full-scope token}"
+      HXA_RUNNER_ID: "${HXA_RUNNER_ID:-mock-server-check}"
+      HXA_MOCK_DELAY_MS: "${HXA_MOCK_DELAY_MS:-1000}"
+    depends_on:
+      hxa-connect:
+        condition: service_healthy
+    restart: "no"

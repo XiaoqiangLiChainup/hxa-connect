@@ -16,6 +16,8 @@ The first increment keeps the existing Bot Owner login.
 - [MVP scope, state model, and API contract](docs/internal-agent-mvp.md)
 - [Task runner and isolated mock demonstration](docs/task-runner.md)
 - [Validation results and current boundaries](docs/internal-agent-validation.md)
+- [Company pilot deployment and HTTPS setup](docs/company-deployment.md)
+- [Handoff to an existing company Zylos](docs/company-zylos-handoff.md)
 
 The mock runner does not invoke a model. Real Zylos/Codex execution, subscription
 billing verification, and production deployment validation are separate steps.
