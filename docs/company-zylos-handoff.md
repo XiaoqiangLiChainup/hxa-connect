@@ -45,6 +45,13 @@ missing prerequisite. The company host operator can execute the same runbook.
 Do not expose a new public endpoint or alter host privileges to work around a
 missing company access path.
 
+If only the company HTTPS entry point is missing, use
+`docs/company-browser-check.md` to prepare an SSH/local-browser acceptance path
+for an operator who already has approved host access. Return the non-secret host
+configuration requirements and an SSH command using that operator's existing
+connection. The operator runs the tunnel and browser on their own computer.
+Report this limited browser result separately from company HTTPS acceptance.
+
 Return this concise report:
 
 | Field | Result |

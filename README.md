@@ -30,15 +30,18 @@ validated. Model authentication and subscription quota use are not verified here
 ### 1. Select the correct source
 
 Deployment repository: `https://github.com/XiaoqiangLiChainup/hxa-connect.git`.
-Deployment branch: `feat/internal-agent-deployment`.
+Deployment branch for the security follow-up: `fix/m0-security-hardening`.
+Existing pilots at `3e91c5b` should use the
+[security update and revalidation guide](docs/m0-security-update.md), preserving
+their company-local Compose overlays and network isolation.
 
 Run the following only after that branch has been published. The first command
 must find it; if it does not, stop and report missing publication rather than
 silently using `main` or the upstream latest release.
 
 ```bash
-git ls-remote --exit-code --heads https://github.com/XiaoqiangLiChainup/hxa-connect.git refs/heads/feat/internal-agent-deployment
-git clone --single-branch --branch feat/internal-agent-deployment https://github.com/XiaoqiangLiChainup/hxa-connect.git hxa-agent-pilot-src
+git ls-remote --exit-code --heads https://github.com/XiaoqiangLiChainup/hxa-connect.git refs/heads/fix/m0-security-hardening
+git clone --single-branch --branch fix/m0-security-hardening https://github.com/XiaoqiangLiChainup/hxa-connect.git hxa-agent-pilot-src
 cd hxa-agent-pilot-src
 git rev-parse HEAD
 sh deploy/preflight.sh
@@ -96,6 +99,11 @@ Use the company's existing Nginx or Caddy with a trusted TLS certificate. Exampl
 are in `deploy/`. Normal login uses Secure cookies, so a plain HTTP private-IP
 address is not a complete browser deployment. Prefer a dedicated hostname at `/`.
 
+When a company HTTPS hostname is not yet available, an operator with existing
+approved SSH access can use the optional [local-browser acceptance path](docs/company-browser-check.md).
+It keeps normal cookie/CSRF protections and validates a local browser session;
+company HTTPS acceptance remains a separate step.
+
 ### 4. Create pilot identities and verify one task
 
 Follow [First login and Bot registration](docs/company-first-login.md). In brief:
@@ -129,15 +137,23 @@ Detailed instructions:
 - [Company deployment, existing-Hub decisions, HTTPS, backup and rollback](docs/company-deployment.md)
 - [Copyable request for the company Zylos](docs/company-zylos-handoff.md)
 - [First login and Bot registration](docs/company-first-login.md)
+- [Browser acceptance through an existing SSH connection](docs/company-browser-check.md)
+- [M0 security update and existing-pilot revalidation](docs/m0-security-update.md)
 - [Runner configuration and the future real-agent adapter](docs/task-runner.md)
 - [Task states and API contract](docs/internal-agent-mvp.md)
 - [Validation results and limitations](docs/internal-agent-validation.md)
 
-Validation of the M0 application: **540 tests passed; 7 Redis tests skipped**;
+Baseline validation of the original M0 application: **540 tests passed; 7 Redis tests skipped**;
 server/dashboard builds and 17 real-browser checks passed. Deployment preparation
 has static configuration checks. The target Docker build, proxy, and company-server
 acceptance still run in your environment. Existing license and branding conditions
 remain in force.
+
+Security follow-up validation: **613 tests passed; 7 Redis tests skipped**,
+server/dashboard builds passed, and both dependency trees reported zero known npm
+audit findings on 2026-11-03. See the
+[security update guide](docs/m0-security-update.md) for exact scope and pilot
+revalidation requirements.
 
 ## Core Concepts
 

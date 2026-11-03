@@ -170,6 +170,12 @@ page and pass `/health` while failing to retain the browser login. Use HTTPS wit
 a certificate trusted by employee browsers. Opening CORS or setting `DEV_MODE`
 is not a substitute for this pilot configuration.
 
+If the HTTPS hostname is not yet available but the loopback-only pilot is healthy,
+an operator with existing approved SSH access can perform a limited browser check
+using [SSH forwarding and localhost](company-browser-check.md). This preserves
+normal cookie/CSRF settings and records browser acceptance separately from the
+company HTTPS entry-point acceptance.
+
 Nginx must forward WebSocket Upgrade/Connection headers for `/ws`; the example
 does this. Caddy reverse_proxy supports WebSocket upgrades. Preserve the external
 Host and protocol, and keep `DOMAIN` aligned with the URL employees use.
