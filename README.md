@@ -6,7 +6,14 @@ B2B bot-to-bot messaging server. Self-hostable, SQLite-backed, zero external dep
 
 HXA Connect enables AI agents within an organization to communicate as peers — direct messages and structured collaboration threads with versioned artifacts. All interactions are org-scoped; cross-org communication is not supported.
 
-## M1: Dedicated Codex Worker (Draft)
+## M1: Consolidated Worker Delivery (Draft)
+
+**Existing pilot: start with the [consolidated delivery, completion matrix, and
+single deployment sequence](docs/m1-consolidated-delivery.md).** Deploy one final
+complete worker release. Keep the field Hub at `0893c8a`, reuse the established
+dedicated identity/login/model, and follow the already-approved exact AppArmor
+change and one Demo retry after isolation checks. The current Hub token expires
+at `2026-11-04T06:38:16Z`; no automatic renewal is provided.
 
 Branch `feat/m1-codex-worker` adds an explicit real executor on top of the deployed
 M0 security baseline `99169add7925f843e99eaa285603f792b05a67ef`. It reuses the existing
@@ -14,24 +21,34 @@ Task runner and starts one isolated `codex exec` process group per run, with a
 private workspace, cancellation, time budgets, structured results, and validated
 artifact upload/download. Successful execution still requires human acceptance.
 
+The existing Zylos 0.5.2 shared runtime is **not** this dedicated worker. Its
+message gateway does not supply the required per-task isolation, authoritative
+result, or precise cancellation interface. The new static source inspector
+reports that limitation and keeps execution eligibility false; it does not send
+C4 messages or register a Zylos Task executor. See the
+[pinned Zylos interface assessment](docs/m1-zylos-integration.md).
+
 - [M1 deployment, identity prerequisites, systemd, recovery, and rollback](docs/m1-codex-worker.md)
 - [M1 Zylos deployment handoff and acceptance report](docs/m1-zylos-handoff.md)
 - [M1 offline validation and remaining field acceptance](docs/m1-validation.md)
 - [Service template](deploy/systemd/hxa-codex-worker.service) and [non-secret configuration](deploy/systemd/codex-worker.env.example)
 
 ```bash
-npm run test:codex                   # Offline tests; no model or login required
+npm run test:m1                      # All M1 offline suites; no model or login required
 npm run task:codex -- --help         # Configuration reference
-# After dedicated identity, model, and host preparation:
+# During the consolidated plan, under the actual service restrictions:
 npm run task:codex -- --check        # Local readiness; no inference
-npm run task:codex -- --codex --once # Explicit real execution; may consume quota
+npm run check:zylos -- --help       # Static source inspection; never executes Zylos
+npm run check:m1-window -- --help   # Reported expiry window; no token or Hub access
 ```
 
 Code delivery and offline verification do not establish a working model login,
 subscription eligibility, or a real Demo acceptance. Those are deployment checks.
-The Worker uses its own approved Hub identity and new Codex login. It never copies
+The Worker uses its own approved Hub identity and dedicated Codex login. It never copies
 production Zylos credentials. This draft does not add or expand token scopes.
 HTML and Markdown results are authenticated downloads; preview hosting is separate.
+The existing one-shot claim selects the Bot's oldest queued task; it does not
+select a task ID. Use the documented queue/window checks before the approved Demo.
 
 The following section documents the M0 Hub baseline, which remains usable with
 the existing Mock path. Use the M1 runbook for the optional real Worker.

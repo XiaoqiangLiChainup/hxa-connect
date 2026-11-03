@@ -2,7 +2,12 @@
 
 Use the company's existing authorized channel. This is a deployment handoff for
 one dedicated Codex task worker, not a request to change Zylos itself. Follow
-[m1-codex-worker.md](m1-codex-worker.md) and the matching source commit.
+[the consolidated delivery](m1-consolidated-delivery.md) for the current one-time
+deployment, completion matrix, token window, and acceptance sequence. The
+[Codex runbook](m1-codex-worker.md) supplies detailed commands; the
+[Zylos interface assessment](m1-zylos-integration.md) separately records why the
+existing shared Zylos cannot yet act as a strict Task executor. Zylos has already
+handed deployment to the direct-SSH assistant; no message to Zylos is needed.
 
 ## Current direct-SSH patch: sandbox readiness after worker `1544`
 
@@ -10,7 +15,9 @@ Hub stays at `0893c8a`; update only the worker from the reported `1544` baseline
 The first real Demo correctly failed during sandbox initialization. Its ten old
 preflight checks had passed, which exposed a readiness gap, not a reason to
 replace the model, credentials, or identity. Preserve that failed attempt and
-its evidence. Do not retry it as part of this code update.
+its evidence. The user has now approved the exact prepared AppArmor policy and
+one retry after isolation checks, to run in the consolidated deployment rather
+than a separate patch cycle. Do not repeat those approvals.
 
 The dedicated user, member Bot, approved 24-hour full-scope token, ChatGPT login,
 and `gpt-6.1-sol` / `medium` configuration already exist. Reuse them. Stage the
@@ -24,8 +31,8 @@ Update the unit with the reviewed static canary line, preserving all restriction
 SetCredential=hxa_sandbox_probe:non-secret-hxa-sandbox-canary-v1
 ```
 
-This public test value does not change a token or grant host privileges. Keep the
-unit in `--check` mode. Require the actual current invocation's readiness JSON
+This public test value does not change a token or grant host privileges. First
+keep the unit in `--check` mode. Require the current invocation's readiness JSON
 with all **16** check names in runbook section 5 present and boolean `passed: true`,
 as well as `ready: true`, version `0.166.0`, and the expected model. The six new
 checks exercise command startup, allowed workspace writes, denied external writes,
@@ -41,13 +48,13 @@ the stricter Codex permission profile `hxa_m1_<random hex>`, generated once per
 worker invocation to avoid lower-layer fixed-name configuration collisions; this is separate from a host
 AppArmor profile and the artifact profile `feedback-demo`.
 
-On a separately approved real attempt, the worker also runs the pinned CLI's
+On the already-approved conditional real retry, the worker also runs the pinned CLI's
 startup-config preview before `codex exec`. This uses the existing dedicated
 Codex identity and may fetch managed configuration; it is not part of the local
 `--check` and does not submit a model request. An incompatible policy or an
 existing dedicated `CODEX_HOME/config.toml` stops execution for review, without
 changing company policy, credentials, or selecting a fallback. See runbook
-section 6. Do not run this preview manually as part of the current check-only patch.
+section 6. Do not run this preview manually during the credential-free source inspection.
 
 That policy makes the state root read-only for sandboxed commands and allows
 writes at the deeper current workspace. The `:workspace` baseline still allows `/tmp` and `TMPDIR`;
@@ -59,14 +66,14 @@ automatically if this validation fails.
 
 The reported Ubuntu 24.04 AppArmor restriction blocks the actual bundled helper.
 The deployment assistant has prepared a template-derived exact-helper policy and
-offline parsing passed, but it is **not installed or loaded**. Follow runbook
-section 5.2 to present its exact path/hash, Ubuntu template/ABI, unique parent and
-child names, transitions/includes, new allowance, and scoped rollback for explicit
-user approval. Only that concrete reviewed policy may be installed/loaded after
-approval. Do not disable host restrictions, expand unit permissions, or generate
-an automatic privilege-fix script.
-After an approved policy change, rerun all 16 local checks. A real task retry then
-requires its own explicit approval; a passing check does not authorize it.
+offline parsing passed, but it is **not installed or loaded**. The exact artifact
+and scoped rollback have now been approved. Match its path/hash, Ubuntu template,
+profile names, transitions/includes, and allowance to that existing record, then
+apply it in the consolidated sequence. Do not disable host restrictions, expand
+unit permissions, or automatically modify the policy to make a probe pass.
+Rerun all 16 checks and confirm the intended queue and token window before the
+one approved retry. The token expires at **2026-11-04T06:38:16Z**; do not renew it
+automatically or use the one-shot approval for a different task or further retry.
 
 ## Earlier direct-SSH patch: CLI entry after `0893c8a`
 
@@ -77,8 +84,8 @@ settings. Do not recreate identities, log in again, extend token scope/lifetime,
 or repeat initial-install gates for this worker-only patch.
 
 The `0893c8a` CLI guard can return silent exit 0 through the `current` symlink.
-The earlier authorized one-shot could continue through its fixed real path; that
-authorization is not approval to retry the now-failed Demo. Retain the fix by
+The earlier authorized one-shot finished through its fixed real path and failed.
+The later consolidated approval covers one retry after isolation checks. Retain the fix by
 staging the **whole new verified release**, including `scripts/cli-entrypoint.mjs`;
 stop and reconcile only the M1 worker before switching `current`.
 
@@ -92,8 +99,8 @@ legitimately fail a model-free CI check; it does not establish host readiness.
 
 After validating the new symlink path, restore/remove only the recorded temporary
 mode override that pins the old real path. Preserve other drop-ins and the
-current patch's `--check` mode; do not accidentally enable real execution by
-removing its mode selection. Use `--codex --once` only after retry approval.
+check mode until the consolidated prerequisites pass; do not accidentally enable
+resident execution by removing its mode selection. Then use the approved `--codex --once`.
 Reload and inspect the effective unit before the selected operation.
 No model, identity, permission, Hub image, data, database,
 or TLS change is needed for this entry fix. The remaining sections describe the

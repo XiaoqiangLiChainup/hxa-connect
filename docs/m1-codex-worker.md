@@ -11,6 +11,14 @@ sections below record later deployment state. Record repository tests, CI, local
 readiness, and real business acceptance separately. Do not turn an unperformed
 check or a correctly failed task into a success claim.
 
+**Current operator entry point:** use the
+[consolidated M1 delivery](m1-consolidated-delivery.md) for one complete release
+and one deployment/acceptance sequence. Do not deploy `73ffe0e` separately. The
+previously prepared exact-helper AppArmor policy and one Demo retry after
+isolation checks are now approved. Preserve the existing identities/login/model;
+the current token expires at `2026-11-04T06:38:16Z` and is not renewed automatically.
+This document remains the detailed mechanism and first-install reference.
+
 ## Existing pilot: sandbox readiness gap after worker `1544`
 
 The field report now identifies Hub `0893c8a` and worker baseline `1544`. The
@@ -36,16 +44,17 @@ SetCredential=hxa_sandbox_probe:non-secret-hxa-sandbox-canary-v1
 
 This creates a known test value alongside the unit's credential file; it changes
 no login, token, token scope, or OS privilege. Keep all other service restrictions
-and local overrides. Use **`--check` mode** for validation; do not start `--codex`,
-remove the preflight mode override, or retry the failed task as part of this
-patch. Section 5 now requires all **16** checks from the current invocation.
+and local overrides. First use **`--check` mode** for validation. Section 5 requires
+all **16** checks from the current invocation. Then follow the consolidated
+queue/window checks and the already-approved one-shot retry; do not enable
+resident polling or additional retries as part of this acceptance.
 
 The deployment assistant has prepared an exact-helper AppArmor policy from an
 Ubuntu template and reports that offline parsing passed. It has **not** installed
-or loaded that policy. Loading it adds host security-policy permissions and needs
-explicit user approval of the concrete policy described in section 5.2. A real
-task retry also awaits explicit approval after local readiness succeeds. Code
-preparation, policy approval, and a real model retry are separate steps.
+or loaded that policy. The user has since approved that concrete exact-helper
+policy and one Demo retry after isolation verification. Apply the recorded
+artifact and scoped rollback in the consolidated sequence without asking again.
+A materially different policy or extra retry is outside that recorded scope.
 
 ## Earlier worker update: CLI entry fix after `0893c8a`
 
@@ -58,9 +67,9 @@ the initial-install approval, identity creation, or login steps below.
 The `0893c8a` worker's CLI entry guard could silently exit 0 when invoked through
 the `current` symlink, without running `--help`, `--check`, or the worker. Exit 0
 alone therefore proves nothing. During that earlier update, the already-authorized
-one-shot could finish through the release's fixed real path. That authorization
-does not authorize retrying the now-failed Demo. Retain the entry fix and the
-following release/override safeguards; use the current patch's check-only gate.
+one-shot could finish through the release's fixed real path. It subsequently
+failed; the later consolidated approval now covers one conditional retry.
+Retain the entry fix and these release/override safeguards.
 
 1. Stage the complete new verified release in a new root-owned release directory,
    including the shared `scripts/cli-entrypoint.mjs`. Do not copy only the worker
@@ -76,8 +85,8 @@ following release/override safeguards; use the current patch's check-only gate.
 4. Only after that validation, restore or remove the **specific recorded temporary
    mode override** that pins the old real path. Preserve every other unit/drop-in
    setting. Never let removing a mode override silently restore resident mode.
-   For the current readiness patch, retain `--check`; use `--codex --once` only
-   after the real retry is approved. Reload systemd and inspect the effective
+   Retain `--check` until the consolidated prerequisites pass, then use the
+   already-approved `--codex --once`. Reload systemd and inspect the effective
    `ExecStart` and `ExecStartPre` before the selected operation.
 
 This is a worker CLI patch based on `0893c8a`. It changes no model, account, token,
@@ -119,7 +128,8 @@ read-only M0 Compose inspection is necessary, use all **three** recorded `-f`
 arguments; generic one-file or two-file examples elsewhere are not this host's
 deployment command. Record the three filenames before operating on M0.
 
-Before host provisioning or real execution, the operator records approval for:
+For a new installation only, the operator records approval for the following.
+The existing pilot has already completed these steps; do not repeat them:
 
 1. The dedicated `pilot-real-worker` Unix user/group and directories, the
    root-managed release and unit, and a brief pilot-Hub image-update window.
@@ -675,8 +685,9 @@ not mean it is loaded or attached to the bundled helper. The
 distinguishes offline `--skip-kernel-load` checks from loading/replacing kernel
 policy. Offline parsing is neither runtime enforcement nor approval to load.
 
-The deployment assistant owns the proposed profile artifact. Before requesting
-approval to install/load it, make the concrete change reviewable:
+The deployment assistant owns the profile artifact. The current pilot's exact
+artifact is already approved; verify it still matches that record. For a new or
+materially changed policy, make the following concrete change reviewable:
 
 - Identify the exact root-managed bundled-helper path and binary hash, the Ubuntu
   package/template version and ABI, and the proposed policy file/hash and diff.
@@ -696,13 +707,13 @@ approval to install/load it, make the concrete change reviewable:
   restriction, switch to complain/unconfined as a fallback, remove sandboxing,
   or broaden the worker's systemd capabilities or writable paths.
 
-Installing/loading this policy changes host security permissions and therefore
-requires **explicit user approval** beyond the already-approved worker identity
-and login. The repository supplies no policy-installation or privilege-expansion
-script. Do not perform an automatic fix when the probe fails. After an approved
-policy change, rerun the full 16-check preflight in check-only mode. Even if it
-passes, the real failed-task retry remains a separate action awaiting explicit
-approval; do not automatically requeue, claim, or execute it.
+Installing/loading a policy changes host security permissions. The current pilot
+already has approval for its exact recorded artifact, in addition to the worker
+identity and login. The repository supplies no policy-installation or
+privilege-expansion script. Do not modify the policy automatically when a probe
+fails. After applying the approved artifact, rerun all 16 checks under the real
+unit and follow the consolidated queue/window checks before the one approved
+Demo retry. Preserve the prior failed attempt; there is no automatic replay.
 
 ### 5.3 Read-only local recovery inspection
 
@@ -727,9 +738,10 @@ through the web server.
 
 ## 6. Bounded real execution
 
-For the currently failed first Demo, this section is used only after the explicit
-retry approval described above. Updating readiness code, adding the non-secret
-canary, or loading an approved AppArmor profile does not itself authorize a retry.
+For the current pilot, one retry of the failed first Demo has already been
+approved after isolation verification. Use the consolidated plan's queue and
+token-window checks before this section. That approval does not cover a second
+retry, different task, ongoing polling, or changing a Zylos instance.
 
 Before a real execution submits its prompt, the worker uses the pinned CLI's
 `app-server --strict-config --print-startup-config` preview to inspect managed
@@ -765,16 +777,22 @@ ExecStart=
 ExecStart=/opt/hxa-codex-worker/node/bin/node /opt/hxa-codex-worker/current/scripts/codex-worker.mjs --codex --once
 ```
 
-This restores the base unit's local `ExecStartPre` check. Create the approved task
-in the existing HTTPS dashboard and assign it to the dedicated worker Bot. Then
-reload and start the unit. Confirm that a specific run was claimed; exit code 0
-by itself is not acceptance. Test the pinned model and Codex sandbox inside this
-unit rather than a less restricted interactive shell.
+This restores the base unit's local `ExecStartPre` check. For the current pilot,
+deliberately retry the existing failed Demo through the Task workflow, preserving
+its earlier attempt; do not create a replacement task. For a first installation
+with no existing task, create only its approved task in the existing HTTPS
+dashboard and assign it to the dedicated worker Bot. Verify the queue and token
+window, then reload and start the unit. Confirm that the intended run was claimed;
+exit code 0 by itself is not acceptance. Test the pinned model and Codex sandbox
+inside this unit rather than a less restricted interactive shell.
 
-After one-shot acceptance and recovery checks, an operator may remove only the
-known `10-mode.conf` file, reload systemd, and start the base resident unit. Stop
-the service before each mode/configuration change and reconcile any retained
-lock before restarting it. Do not use an automatic
+After the current one-shot, leave the worker stopped with its bounded mode
+selection retained. Resident polling requires separate explicit authorization;
+it is not a continuation of this Demo approval. Only for that separately
+authorized operation may an operator remove the known `10-mode.conf` file,
+reload systemd, and start the base resident unit. Stop the service before each
+mode/configuration change and reconcile any retained lock before restarting it.
+Do not use an automatic
 restart, rollback, cleanup timer, or model fallback to make a failed test pass.
 
 ### Initial bounds
@@ -957,7 +975,7 @@ automatic replay of unfinished work.
 | Actual Node / Codex / systemd versions | Field report: Node 22.23.4, Codex 0.166.0, systemd 255; record actual versions when checking the new worker |
 | Dedicated user/Bot/login and model approval | Already established for this pilot; retain approval and `gpt-6.1-sol` / `medium`, without credentials |
 | Local `--check` under unit | New 16-check evidence pending; the earlier ten-check pass is insufficient |
-| Real task, queue, cancellation, recovery, and OS exit evidence | First Demo correctly failed at sandbox startup; preserve it. A retry awaits explicit approval |
+| Real task, queue, cancellation, recovery, and OS exit evidence | First Demo correctly failed at sandbox startup; preserve it. One retry after isolation checks is approved and still needs field evidence |
 | Mac HTTPS downloads and human acceptance | Pending |
 | Original production / Zylos unchanged | Pending post-deployment comparison |
 | Outstanding blocker / rollback decision | State explicitly |

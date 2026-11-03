@@ -15,6 +15,9 @@
     "task:runner": "node scripts/task-runner.mjs",
     "task:codex": "node scripts/codex-worker.mjs",
     "test:codex": "vitest run test/codex-*.test.ts",
+    "test:m1": "vitest run test/codex-*.test.ts test/zylos-*.test.ts test/m1-*.test.ts",
+    "check:zylos": "node scripts/zylos-task-check.mjs",
+    "check:m1-window": "node scripts/m1-window-check.mjs",
     "demo:tasks": "node scripts/demo-tasks.mjs"
   },
   "keywords": [

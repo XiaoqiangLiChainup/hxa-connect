@@ -12,14 +12,15 @@ not a record of a company-server deployment or a real model/business acceptance.
 | Gate | Result |
 | --- | --- |
 | Runtime | Node 22.23.4 |
-| Complete Vitest suite | 870 passed, 7 Redis-dependent tests skipped, 0 failed; 877 total in 30 files |
-| M1 suites | 254 passing cases: process controller 35, artifacts 70, worker/lifecycle integration 17, CLI entrypoints 16, sandbox preflight 30, bounded sandbox subprocesses 15, runtime policy guard 57, witness lifecycle 14 |
+| Complete Vitest suite | 974 passed, 7 Redis-dependent tests skipped, 0 failed; 981 total in 34 files |
+| M1 suites | 358 passing cases: the existing 254 Codex/sandbox cases plus 76 Zylos receipt/capability cases, 15 source-inspection cases, 3 token-expiry lifecycle cases, and 10 execution-window cases |
 | Sandbox-gap follow-up | 119 additional passing cases compared with worker baseline `1544bd94aaee3505c8d698683042ca3cf2c31688`; preserves all earlier suites |
+| Consolidation follow-up | 104 additional passing cases compared with `73ffe0ef257e528035e3da613ad2951f85374afb`; no new dependency, Hub API, or active Zylos executor |
 | Additional existing-suite regressions | 3 passing cases for finish confirmation and authenticated file downloads |
 | Server TypeScript build | Passed |
 | Next.js production build and static export | Passed for baseline `0893c8a`; dashboard unchanged by this worker patch; inspect the new head's Dashboard Build CI |
 | Updated unit syntax | systemd 255 accepted a temporary copy including the non-secret `SetCredential`, with both Exec commands replaced by `/usr/bin/true`; no service installed or started here |
-| Documentation checks | 19 Bash blocks pass `bash -n`; 6 relative links resolve across the three M1 documents; whitespace checked |
+| Documentation checks | 21 Bash blocks pass `bash -n`; 17 relative links resolve across the five M1 documents; whitespace checked |
 
 Commands used with the Node 22 executable on PATH:
 
@@ -31,7 +32,8 @@ npm run build
 The unchanged dashboard build is checked by the new head's Dashboard Build CI;
 the baseline local static-export result is not a new local build claim.
 
-The focused model-free suite is also available as `npm run test:codex`.
+The complete focused model-free suite is available as `npm run test:m1`;
+`npm run test:codex` retains the original Codex-only scope.
 No model credentials or model service are needed for it. Temporary Hub databases,
 Bot identities, files, and subprocesses belong only to test fixtures and are
 cleaned up by the tests; they are not production or M1 deployment identities.
@@ -126,6 +128,50 @@ configuration after real execution is authorized; it is not part of `--check`.
 Its result and the following exec are separate policy snapshots, not an atomic
 guarantee against concurrent host/cloud policy changes.
 
+## Consolidated delivery after `73ffe0e`
+
+The new work preserves the Codex executor and consolidates the deployment into
+one release/acceptance sequence. It does not deploy patches individually. The
+exact-helper AppArmor policy and one conditional Demo retry have since been
+approved; the documents now reuse that approval, preserve the existing identities
+and model, and record the token expiry `2026-11-04T06:38:16Z`.
+
+Official Zylos Core `v0.5.2` was inspected at commit
+`8ee9bd9007edab46f766f3574e0ad56cf69268c2`. The evidence and precise missing
+interfaces are in [the Zylos assessment](m1-zylos-integration.md). Its shared
+runtime/C4 transport cannot supply the strict per-task isolation, result,
+artifact ownership, cancellation, idempotency and lease-fencing contract.
+No supported Zylos task interface was invented and no active executor was shipped.
+
+The additional offline validation establishes:
+
+- `classifyC4Receipt` accepts only bounded, single, unambiguous JSON. Queued and
+  handled receipts, transport `running/delivered/failed`, process exit 0, late
+  output, and global capability assertions never become successful Task results.
+  Unknown outcomes never request automatic replay or expose raw error content.
+- The source inspector opens only its fixed public-file list, rejects unsafe
+  redirections/nonregular/unbounded files, projects package fields, and does not
+  import or execute the inspected code. Tests use synthetic auth/env sentinels,
+  filesystem/network/spawn observers, real Node CLI subprocesses through symlink
+  paths, and import-only entry checks. No company source or credential is used.
+- A separate check against the actual downloaded official source matched all
+  twelve fingerprints and still emitted `capability.ready: false`,
+  `claim_allowed: false`, and exit 2. This verifies static source inspection only;
+  `runtime_verified` and `auth_inspected` remained false.
+- The window checker rejects expired, insufficient, malformed or reduced-reserve
+  input using the host clock. It reads no token and does not authenticate it or
+  choose a task; those limitations are explicit output fields.
+- HTTP 401 at claim executes no adapter and is not retried. HTTP 401 during
+  heartbeat aborts the current run, joins asynchronous cleanup, refuses late
+  success, and stops before another claim. A failing settlement observer also
+  stops. These cases use injected HTTP and executor fixtures, not a live token.
+
+The M1 Task claim API still chooses the oldest queued task for the assigned Bot.
+`--once` is not a task-ID selector. The consolidated operator sequence requires
+an explicit queue check and enough remaining token time before the already-
+approved one-shot. No automatic renewal, queue reordering, new token scope,
+production Zylos permission change, or shared-session cancellation is added.
+
 ## What the offline cases establish
 
 - The process controller starts real local Node fixture subprocesses with argument
@@ -164,23 +210,27 @@ handoff reports the actual remote state after publication.
 The deployment assistant reports that the dedicated identities, approved token,
 fresh login, model/effort pair, and baseline Hub `0893c8a` are already established.
 Preserve them; do not repeat provisioning. The failed first one-shot has ended.
-Its authorization does not cover another attempt.
+The user has now approved the exact prepared AppArmor policy plus one retry
+after isolation checks. Follow the [consolidated delivery](m1-consolidated-delivery.md)
+without asking for those same approvals again. The current token expires at
+`2026-11-04T06:38:16Z` and cannot be renewed automatically.
 
 The following remain target-host actions, not actions performed or accepted
 from this code-authoring environment:
 
 - Stage the exact new worker release, preserve the entry fix, add the non-secret
-  unit marker, and run only `--check` under the same unit restrictions. Hub,
+  unit marker, and first run `--check` under the same unit restrictions. Hub,
   database, credentials, model choice, and network/TLS remain unchanged.
-- Present the deployment assistant's concrete exact-helper AppArmor policy and
-  scoped rollback for user approval before installing/loading it. Offline parser
-  success is not approval or runtime enforcement. No policy-installation script,
+- Verify and apply the deployment assistant's already-approved exact-helper
+  AppArmor artifact and scoped rollback. Offline parser success is not runtime
+  enforcement. No policy-installation script,
   host capability grant, global userns change, or sandbox downgrade is delivered.
 - After any approved prerequisite correction, capture a fresh complete 16-check
   result. The development fixtures cannot verify target-host bwrap/AppArmor.
-- Obtain the separately required real-retry approval, then validate the real model
-  and business Demo under that unit, including the user's Mac HTTPS/download and
-  interaction workflow. Preserve the original failed attempt; do not auto-requeue.
+- After the queue/window and isolation gates pass, execute the already-approved
+  single retry and validate the model/business Demo under that unit, including
+  the user's Mac HTTPS/download and interaction workflow. Preserve the original
+  failed attempt; do not auto-requeue or add extra model tasks.
 
 The Demo validator checks file structure and declarations. It is not a full
 JavaScript safety analysis or proof that the business interactions work. A person
