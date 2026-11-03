@@ -8,10 +8,19 @@ import { HubDB } from '../src/db.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 
 let tmpDir: string;
 let dbPath: string;
+
+// Use the current Node runtime without the tsx CLI's IPC server.
+function runMigration(...args: string[]): string {
+  return execFileSync(process.execPath, ['--import', 'tsx', 'src/migrate.ts', ...args], {
+    cwd: path.resolve(''),
+    encoding: 'utf-8',
+    stdio: 'pipe',
+  });
+}
 
 beforeEach(() => {
   tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'hxa-migrate-test-'));
@@ -103,10 +112,7 @@ async function seedTestDb(): Promise<void> {
 
 describe('migrate CLI', () => {
   it('shows help with --help', () => {
-    const result = execSync('npx tsx src/migrate.ts --help 2>&1', {
-      cwd: path.resolve(''),
-      encoding: 'utf-8',
-    });
+    const result = runMigration('--help');
     expect(result).toContain('SQLite → PostgreSQL Migration');
     expect(result).toContain('--sqlite');
     expect(result).toContain('--postgres');
@@ -114,10 +120,7 @@ describe('migrate CLI', () => {
 
   it('fails without required args', () => {
     try {
-      execSync('npx tsx src/migrate.ts 2>&1', {
-        cwd: path.resolve(''),
-        encoding: 'utf-8',
-      });
+      runMigration();
       expect.unreachable('Should have thrown');
     } catch (err: any) {
       expect(err.stderr || err.stdout).toContain('--sqlite');
@@ -126,10 +129,7 @@ describe('migrate CLI', () => {
 
   it('fails with invalid SQLite path', () => {
     try {
-      execSync('npx tsx src/migrate.ts --sqlite /nonexistent/db.sqlite --postgres postgres://fake 2>&1', {
-        cwd: path.resolve(''),
-        encoding: 'utf-8',
-      });
+      runMigration('--sqlite', '/nonexistent/db.sqlite', '--postgres', 'postgres://fake');
       expect.unreachable('Should have thrown');
     } catch (err: any) {
       // Should fail trying to open nonexistent path
@@ -140,13 +140,7 @@ describe('migrate CLI', () => {
   it('dry-run shows table counts without writing', async () => {
     await seedTestDb();
 
-    const result = execSync(
-      `npx tsx src/migrate.ts --sqlite ${dbPath} --postgres postgres://fake --dry-run 2>&1`,
-      {
-        cwd: path.resolve(''),
-        encoding: 'utf-8',
-      },
-    );
+    const result = runMigration('--sqlite', dbPath, '--postgres', 'postgres://fake', '--dry-run');
 
     expect(result).toContain('DRY RUN');
     expect(result).toContain('orgs');
@@ -159,13 +153,7 @@ describe('migrate CLI', () => {
   it('dry-run counts all seeded tables correctly', async () => {
     await seedTestDb();
 
-    const result = execSync(
-      `npx tsx src/migrate.ts --sqlite ${dbPath} --postgres postgres://fake --dry-run 2>&1`,
-      {
-        cwd: path.resolve(''),
-        encoding: 'utf-8',
-      },
-    );
+    const result = runMigration('--sqlite', dbPath, '--postgres', 'postgres://fake', '--dry-run');
 
     // We seeded: 1 org, 1 bot, 1 channel, 1 channel_member, 1 message,
     // 1 thread, 1 thread_participant, 1 thread_message, 1 artifact,

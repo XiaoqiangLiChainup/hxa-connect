@@ -1,103 +1,154 @@
 import crypto from 'node:crypto';
-import { lookup } from 'node:dns/promises';
+import dns from 'node:dns/promises';
+import type { LookupAddress } from 'node:dns';
+import http from 'node:http';
+import https from 'node:https';
+import { BlockList, isIP, type LookupFunction } from 'node:net';
 import { URL } from 'node:url';
 import type { HubDB } from './db.js';
 import { webhookLogger } from './logger.js';
 
-/**
- * Compute HMAC-SHA256 signature for a webhook payload.
- * Returns hex-encoded signature string.
- */
 function computeHmacSignature(secret: string, body: string): string {
   return crypto.createHmac('sha256', secret).update(body, 'utf8').digest('hex');
 }
 
-/**
- * Check if an IP address is in a private/reserved range.
- */
-function isPrivateIP(ip: string): boolean {
-  // Strip IPv4-mapped IPv6 prefix — two forms:
-  //   dotted:  ::ffff:127.0.0.1
-  //   hex:     ::ffff:7f00:1  (127.0.0.1 encoded as two 16-bit hex groups)
-  let normalized = ip;
-  const v4mappedDotted = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i;
-  const dottedMatch = v4mappedDotted.exec(normalized);
-  if (dottedMatch) {
-    normalized = dottedMatch[1];
-  } else {
-    const v4mappedHex = /^::ffff:([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i;
-    const hexMatch = v4mappedHex.exec(normalized);
-    if (hexMatch) {
-      const hi = parseInt(hexMatch[1], 16);
-      const lo = parseInt(hexMatch[2], 16);
-      normalized = `${(hi >> 8) & 0xff}.${hi & 0xff}.${(lo >> 8) & 0xff}.${lo & 0xff}`;
-    }
-  }
+const REQUEST_TIMEOUT_MS = 10_000;
 
-  // IPv4 private ranges
-  if (/^127\./.test(normalized)) return true;                          // 127.0.0.0/8
-  if (/^10\./.test(normalized)) return true;                           // 10.0.0.0/8
-  if (/^172\.(1[6-9]|2\d|3[01])\./.test(normalized)) return true;     // 172.16.0.0/12
-  if (/^192\.168\./.test(normalized)) return true;                     // 192.168.0.0/16
-  if (/^169\.254\./.test(normalized)) return true;                     // 169.254.0.0/16 (link-local)
-  if (/^0\./.test(normalized)) return true;                            // 0.0.0.0/8
-  // IPv6 private ranges
-  if (normalized === '::1') return true;                               // loopback
-  if (/^f[cd]/i.test(normalized)) return true;                         // fc00::/7 (unique local)
-  if (/^fe80/i.test(normalized)) return true;                          // fe80::/10 (link-local)
+class WebhookPolicyError extends Error {
+  readonly code = 'WEBHOOK_DESTINATION_BLOCKED';
+}
+
+// Conservative public-destination policy, using Node's binary CIDR matcher.
+// Sources: IANA IPv4/IPv6 Special-Purpose Address Registries. These exclusions
+// intentionally include special-purpose ranges with globally reachable exceptions.
+const blockedIPv4 = new BlockList();
+for (const [address, prefix] of [
+  ['0.0.0.0', 8], ['10.0.0.0', 8], ['100.64.0.0', 10], ['127.0.0.0', 8],
+  ['169.254.0.0', 16], ['172.16.0.0', 12], ['192.0.0.0', 24], ['192.0.2.0', 24],
+  ['192.88.99.0', 24], ['192.168.0.0', 16], ['198.18.0.0', 15],
+  ['198.51.100.0', 24], ['203.0.113.0', 24], ['224.0.0.0', 4], ['240.0.0.0', 4],
+] as const) blockedIPv4.addSubnet(address, prefix, 'ipv4');
+
+const publicIPv6 = new BlockList();
+publicIPv6.addSubnet('2000::', 3, 'ipv6');
+const blockedIPv6 = new BlockList();
+for (const [address, prefix] of [
+  ['2001::', 23], ['2001:db8::', 32], ['2002::', 16], ['3fff::', 20],
+] as const) blockedIPv6.addSubnet(address, prefix, 'ipv6');
+
+function isPublicAddress(address: string): boolean {
+  const family = isIP(address);
+  if (family === 4) return !blockedIPv4.check(address, 'ipv4');
+  // Only native global-unicast IPv6 is supported. This also rejects unspecified,
+  // loopback, ULA, link/site-local, multicast, mapped/compatible IPv4, NAT64,
+  // discard-only and other reserved space, rather than trusting an embedded IP.
+  if (family === 6) return publicIPv6.check(address, 'ipv6') && !blockedIPv6.check(address, 'ipv6');
   return false;
 }
 
+function parseWebhookUrl(value: string): URL {
+  let parsed: URL;
+  try { parsed = new URL(value); } catch {
+    throw new WebhookPolicyError('webhook_url is not a valid URL');
+  }
+  if (parsed.protocol === 'http:' && process.env.DEV_MODE !== 'true') {
+    throw new WebhookPolicyError('webhook_url must use https (http allowed only when DEV_MODE=true)');
+  }
+  if (!['https:', 'http:'].includes(parsed.protocol)) {
+    throw new WebhookPolicyError('webhook_url must use http or https scheme');
+  }
+  if (parsed.username || parsed.password) {
+    throw new WebhookPolicyError('webhook_url must not contain credentials');
+  }
+  const hostname = parsed.hostname.replace(/^\[|\]$/g, '');
+  // Node bypasses custom DNS lookup for IP literals, so check them here too.
+  if (isIP(hostname) && !isPublicAddress(hostname)) {
+    throw new WebhookPolicyError('webhook_url must use a public IP address');
+  }
+  return parsed;
+}
+
+async function resolvePublicAddresses(hostname: string): Promise<LookupAddress[]> {
+  const family = isIP(hostname);
+  const addresses = family
+    ? [{ address: hostname, family }]
+    : await dns.lookup(hostname, { all: true, verbatim: true });
+  if (addresses.length === 0) throw Object.assign(new Error('Empty DNS answer'), { code: 'ENOTFOUND' });
+  // Fail closed on mixed public/private results, not just the first DNS answer.
+  if (addresses.some(result => !isPublicAddress(result.address) || isIP(result.address) !== result.family)) {
+    throw new WebhookPolicyError('webhook_url must not resolve to a private, reserved or unsupported IP address');
+  }
+  return addresses;
+}
+
+// This is the resolver used by the actual TCP connection. The validated answers
+// are passed directly to Node; there is no second unchecked DNS lookup between
+// validation and connection. Support both native single and dual-stack lookup.
+const checkedLookup: LookupFunction = (hostname, options, callback) => {
+  void resolvePublicAddresses(hostname).then(addresses => {
+    const family = options.family === 'IPv4' ? 4 : options.family === 'IPv6' ? 6 : options.family;
+    const eligible = family ? addresses.filter(result => result.family === family) : addresses;
+    if (!eligible.length) {
+      callback(Object.assign(new Error('No address for requested family'), { code: 'ENOTFOUND' }), '');
+    } else if (options.all) callback(null, eligible);
+    else callback(null, eligible[0].address, eligible[0].family);
+  }, error => callback(error instanceof Error ? error : new Error('DNS lookup failed'), ''));
+};
+
+async function postWebhook(url: URL, headers: Record<string, string>, body: string): Promise<number> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  let request: http.ClientRequest | undefined;
+  try {
+    return await new Promise<number>((resolve, reject) => {
+      const options: https.RequestOptions = {
+        method: 'POST', headers, agent: false, lookup: checkedLookup,
+        signal: controller.signal,
+        // Keep the original URL hostname for Host, TLS certificate verification
+        // and SNI. Only DNS answers are pinned; TLS verification is never disabled.
+        rejectUnauthorized: true,
+      };
+      const send = url.protocol === 'https:' ? https.request : http.request;
+      request = send(url, options, response => {
+        const status = response.statusCode ?? 0;
+        // No response body is needed. Bound resources even for an infinite body.
+        response.on('error', () => {});
+        response.destroy();
+        resolve(status);
+      });
+      request.once('error', reject);
+      request.end(body);
+    });
+  } finally {
+    clearTimeout(timer);
+    request?.destroy();
+  }
+}
+
 /**
- * Validate a webhook URL for SSRF safety.
- * - Must be https in production (http allowed in development)
- * - Hostname must not resolve to a private IP
- * Returns null if valid, or an error string if invalid.
+ * Validate a webhook URL at registration. Delivery uses the same policy inside
+ * the actual connection's DNS lookup, since an earlier check cannot pin DNS.
  */
 export async function validateWebhookUrl(url: string): Promise<string | null> {
-  let parsed: URL;
   try {
-    parsed = new URL(url);
-  } catch {
-    return 'webhook_url is not a valid URL';
-  }
-
-  const isDev = process.env.DEV_MODE === 'true';
-
-  // Scheme check
-  if (parsed.protocol === 'http:' && !isDev) {
-    return 'webhook_url must use https (http allowed only when DEV_MODE=true)';
-  }
-  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
-    return 'webhook_url must use http or https scheme';
-  }
-
-  // Resolve hostname and check for private IPs
-  // URL.hostname wraps IPv6 literals in brackets (e.g. [::1]) — strip them for dns.lookup
-  const hostname = parsed.hostname.replace(/^\[|\]$/g, '');
-  try {
-    const { address } = await lookup(hostname);
-    if (isPrivateIP(address)) {
-      return 'webhook_url must not resolve to a private/internal IP address';
-    }
-  } catch (err: any) {
-    // ENOTFOUND = domain doesn't exist; other errors = temporary DNS failure
-    if (err?.code === 'ENOTFOUND') {
+    const parsed = parseWebhookUrl(url);
+    await resolvePublicAddresses(parsed.hostname.replace(/^\[|\]$/g, ''));
+    return null;
+  } catch (error) {
+    if (error instanceof WebhookPolicyError) return error.message;
+    if ((error as NodeJS.ErrnoException)?.code === 'ENOTFOUND') {
       return 'webhook_url hostname could not be resolved';
     }
     return 'webhook_url hostname DNS lookup failed temporarily — please try again';
   }
-
-  return null;
 }
 
 export class WebhookManager {
   constructor(private db: HubDB) {}
 
   /**
-   * Deliver a webhook payload with retry logic and HMAC signing.
+   * Deliver a webhook payload with bounded retries and HMAC signing.
    * Returns true on success, false on failure or if bot is degraded.
-   * Non-blocking: callers should fire-and-forget (no await).
    *
    * When webhook_secret is set, the request includes:
    * - Authorization: Bearer <secret> (legacy, for backward compat)
@@ -110,75 +161,49 @@ export class WebhookManager {
     webhookSecret: string | null,
     payload: unknown,
   ): Promise<boolean> {
-    // Check if degraded — skip delivery
-    if (await this.db.isWebhookDegraded(botId)) {
-      return false;
-    }
-
-    // SSRF re-validation at delivery time to prevent DNS rebinding (TOCTOU)
-    // Registration-time check alone is insufficient: attacker can register with
-    // a public IP then switch DNS to a private IP before delivery.
-    let parsed: URL;
-    try {
-      parsed = new URL(webhookUrl);
-    } catch {
-      webhookLogger.warn({ botId }, 'Invalid webhook URL at delivery time');
-      return false;
-    }
-    const hostname = parsed.hostname.replace(/^\[|\]$/g, '');
-    try {
-      const { address } = await lookup(hostname);
-      if (isPrivateIP(address)) {
-        webhookLogger.warn({ botId }, 'Blocked webhook — resolved to private IP at delivery time');
-        return false;
-      }
-    } catch {
-      // DNS failure at delivery time — skip silently, will retry
-    }
+    if (await this.db.isWebhookDegraded(botId)) return false;
 
     const body = JSON.stringify(payload);
-
-    // Retry strategy: immediate, then 1s, 5s, 30s (4 attempts total)
+    // Retain the existing bounded delivery schedule. Each attempt gets its own
+    // connection, checked DNS resolution and 10-second total request deadline.
     const delays = [0, 1000, 5000, 30000];
 
     for (let attempt = 0; attempt < delays.length; attempt++) {
-      if (attempt > 0) {
-        await new Promise(resolve => setTimeout(resolve, delays[attempt]));
-      }
+      if (attempt > 0) await new Promise(resolve => setTimeout(resolve, delays[attempt]));
 
       try {
+        const parsed = parseWebhookUrl(webhookUrl);
         const headers: Record<string, string> = { 'Content-Type': 'application/json' };
         if (webhookSecret) {
-          headers['Authorization'] = `Bearer ${webhookSecret}`;
-          // Regenerate timestamp on each attempt for fresh replay-protection window
+          headers['Authorization'] = 'Bearer ' + webhookSecret;
           const timestamp = String(Date.now());
-          const signedPayload = `${timestamp}.${body}`;
-          const signature = computeHmacSignature(webhookSecret, signedPayload);
-          headers['X-Hub-Signature-256'] = `sha256=${signature}`;
+          const signature = computeHmacSignature(webhookSecret, timestamp + '.' + body);
+          headers['X-Hub-Signature-256'] = 'sha256=' + signature;
           headers['X-Hub-Timestamp'] = timestamp;
         }
 
-        const res = await fetch(webhookUrl, {
-          method: 'POST',
-          headers,
-          body,
-          signal: AbortSignal.timeout(10000), // 10s timeout per attempt
-        });
-
-        if (res.ok || (res.status >= 200 && res.status < 300)) {
+        const status = await postWebhook(parsed, headers, body);
+        if (status >= 200 && status < 300) {
           await this.db.recordWebhookSuccess(botId);
           return true;
         }
 
-        webhookLogger.warn({ botId, attempt: attempt + 1, status: res.status }, 'Webhook delivery attempt failed');
-      } catch (err: any) {
-        webhookLogger.warn({ botId, attempt: attempt + 1, err: err.message }, 'Webhook delivery attempt error');
+        webhookLogger.warn({ botId, attempt: attempt + 1, status }, 'Webhook delivery attempt failed');
+        // Native http(s).request never follows Location. Every redirect is a
+        // permanent refusal, including same-host and scheme-relative targets.
+        if (status >= 300 && status < 400) break;
+      } catch (error) {
+        // Do not log the URL, Location, response body, request body, or secrets.
+        const code = (error as NodeJS.ErrnoException)?.code;
+        webhookLogger.warn({ botId, attempt: attempt + 1,
+          code: typeof code === 'string' && /^[A-Z0-9_]{1,64}$/.test(code) ? code : 'WEBHOOK_REQUEST_ERROR',
+        }, 'Webhook delivery attempt error');
+        if (error instanceof WebhookPolicyError) break;
       }
     }
 
-    // All retries failed
     await this.db.recordWebhookFailure(botId);
-    webhookLogger.error({ botId }, 'Webhook delivery failed after all retries');
+    webhookLogger.error({ botId }, 'Webhook delivery failed');
     return false;
   }
 }

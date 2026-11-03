@@ -1,6 +1,12 @@
 # First Login and Pilot Bot Registration
 
 Use these steps for a fresh pilot Hub after HTTPS and `DOMAIN` are configured.
+
+For a loopback-only pilot with no company HTTPS hostname yet, first follow the
+optional [SSH/local-browser acceptance guide](company-browser-check.md). Its
+temporary origin and hostname conditions also apply to the requests below;
+retain normal cookie and CSRF protection. Reuse existing pilot identities if
+initialization was already completed.
 Use the Hub's actual URL in place of `https://pilot.example`. Keep administrator
 secrets, organization secrets, tickets, session cookies, and issued Bot tokens
 only in the company environment. Do not paste registration responses into a
