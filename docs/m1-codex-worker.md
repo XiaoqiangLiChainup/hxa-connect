@@ -11,10 +11,49 @@ model login, token file, systemd service, or real business demo has been created
 or executed. Record repository tests, CI, and field acceptance separately. Do not
 fill an unperformed check with a success claim.
 
+## Existing pilot: CLI entry fix after `0893c8a`
+
+This section applies to the current direct-SSH deployment assistant after the
+Zylos handoff. The dedicated user, member Bot, approved 24-hour full-scope token,
+and fresh dedicated ChatGPT login are already provisioned. Preserve the configured
+`gpt-6.1-sol` / `medium` pair and the existing token scope/lifetime. Do not repeat
+the initial-install approval, identity creation, or login steps below.
+
+The `0893c8a` worker's CLI entry guard can silently exit 0 when invoked through
+the `current` symlink, without running `--help`, `--check`, or the worker. Exit 0
+alone therefore proves nothing. The already-authorized one-shot invoked through
+the fixed real path in that release may finish; **do not interrupt the current
+task to install this patch**.
+
+1. Stage the complete new verified release in a new root-owned release directory,
+   including the shared `scripts/cli-entrypoint.mjs`. Do not copy only the worker
+   file or edit the running `0893c8a` release in place.
+2. After the current task finishes, stop only the M1 worker for the switch. Check
+   its control group, local `--report`, and Hub task/run state as in section 8;
+   reconcile any retained lock before restarting. An old PID or empty report
+   alone is insufficient.
+3. Switch `current` using the existing stop-before-switch procedure. Verify the
+   new target's identity and invoke **that `current` path** with `--help` and
+   `--check`. Require the actual Usage text and readiness JSON described in
+   section 5, not just the process or systemd exit status.
+4. Only after that validation, restore or remove the **specific recorded temporary
+   mode override** that pins the old real path. Preserve every other unit/drop-in
+   setting. Keep the authorized `--codex --once` mode: if removing the override
+   would restore resident mode, replace that same known override with the new
+   `current` path and `--once` instead. Reload systemd and inspect the effective
+   `ExecStart` and `ExecStartPre` before continuing the authorized acceptance.
+
+This is a worker CLI patch based on `0893c8a`. It changes no model, account, token,
+permission, Hub image, database, data, or TLS configuration. The initial Hub-image
+update instructions below are not an additional deployment step for this patch.
+Keep the existing login and all service restrictions. Never remove all drop-ins
+or clean old state/releases as a shortcut.
+
 ## 1. Fixed pilot context and approval boundary
 
-The latest operator report supplied these observations. They are field-reported
-values, not measurements made by this document:
+The initial pre-deployment report supplied these observations. They are historical
+field-reported values, not measurements made by this document. For the already
+provisioned pilot, use the patch section above instead of repeating these gates:
 
 | Item | Reported state / M1 decision |
 | --- | --- |
@@ -27,13 +66,14 @@ values, not measurements made by this document:
 | Storage | About 29 GiB free on data storage and 18 GiB on the root filesystem |
 | Codex CLI | Version `0.166.0` reported from the installed CLI/help |
 | M1 source | Branch `feat/m1-codex-worker`, based on `99169add`; use an approved full release commit after publication |
-| Minimum Hub for real artifact acceptance | The same approved M1 release, including authenticated-file cache headers; no database migration |
+| Minimum Hub for real artifact acceptance | The authenticated-file cache fix in `0893c8a` or a later verified compatible release; no database migration |
 | Real M1 UI/model acceptance | Pending |
 
-The worker is a separate host service. The reported M0 Hub remains at `99169add`
-until a later approved deployment. Before real artifact acceptance, update only
-the pilot Hub image to the same verified M1 release: it adds private/no-store
-cache headers to authenticated file downloads. This patch changes no database
+The worker is a separate host service. For an initial installation still using
+the `99169add` Hub, update only the pilot Hub image to the verified M1 release
+that adds private/no-store cache headers to authenticated file downloads. The
+current pilot already has this fix in `0893c8a`; the CLI patch needs no further
+Hub deployment. The cache-header change introduced no database
 schema, account, permission, Compose project, volume, HTTPS site, or Zylos runtime.
 The original production deployment is outside this update.
 Do not run `git clean`, `git reset --hard`, an upstream installer, or a checkout
@@ -427,6 +467,22 @@ these headers; do not share request cookies or Authorization headers.
 
 ## 5. Local preflight under the real unit restrictions
 
+First verify the worker CLI entry through the actual deployed `current` path:
+
+```bash
+/opt/hxa-codex-worker/node/bin/node \
+  /opt/hxa-codex-worker/current/scripts/codex-worker.mjs --help
+```
+
+The command must print the real Usage line:
+
+```text
+Usage: node scripts/codex-worker.mjs --check | --report | --codex [--once]
+```
+
+An empty stdout with exit 0 is a failed CLI-entry check, not success. Preserve the
+actual output as evidence; do not substitute an expected example for it.
+
 `node scripts/codex-worker.mjs --check` performs a local check. It may inspect the
 pinned binary's `--version` and local login status, but does not claim tasks,
 contact the Hub, call a model, or prove that a remote account/model has quota.
@@ -454,9 +510,40 @@ systemctl show hxa-codex-worker.service \
 journalctl -u hxa-codex-worker.service --since '10 minutes ago' --no-pager
 ```
 
-A successful short check can leave the service `inactive`; read the result and
-exit status. Record this as **local preflight**, not real model or UI acceptance.
-Inspect journals locally before sharing a short sanitized status excerpt.
+A successful short check can leave the service `inactive`. Require exit 0 **and
+the actual readiness JSON from this invocation**, not a previous journal entry
+or only `Result=success`. Accept the deployed preflight only when:
+
+- `ready` is the boolean `true`.
+- `codex_version_required` is exactly `"0.166.0"`.
+- `model` equals the expected pinned model (`gpt-6.1-sol` for the currently
+  approved pilot).
+- `checks` is a nonempty array, every entry has the boolean `passed: true`, and
+  all ten distinct required check names below are present.
+
+```text
+linux_non_root_user
+node_22_or_later
+private_state_directory
+dedicated_model_directories
+hub_token_file
+free_disk_budget
+trusted_codex_executable
+trusted_child_path
+codex_0_166_0
+dedicated_chatgpt_login_configured
+```
+
+Empty/malformed stdout or JSON, missing checks, string values such as `"true"`,
+or any failed check are **not accepted**, regardless of exit status. When systemd
+captures stdout, inspect the JSON emitted by the just-started check invocation;
+do not reuse an older readiness record. In CI or an unconfigured environment,
+missing required configuration can legitimately produce a nonzero configuration
+error or failed preflight. That is not a deployment-readiness pass and must not
+be replaced with fabricated success output.
+
+Record this as **local preflight**, not real model or UI acceptance. Inspect
+journals locally before sharing the actual sanitized readiness output.
 
 For read-only local recovery inspection, stop the worker and run the following
 as the dedicated user. This mode needs only the state path, so it remains useful

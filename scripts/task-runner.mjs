@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { pathToFileURL } from 'node:url';
+import { isMainModule } from './cli-entrypoint.mjs';
 import { parseArguments, readConfiguration } from './task-runner/config.mjs';
 import { createMockExecutor, runWorker, safeErrorMessage, ShutdownError } from './task-runner/worker.mjs';
 
@@ -44,7 +44,7 @@ export async function main(args = process.argv.slice(2), env = process.env) {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMainModule(import.meta)) {
   try { process.exitCode = await main(); } catch (error) {
     console.error(`Task runner: ${safeErrorMessage(error)}`);
     process.exitCode = 2;

@@ -12,12 +12,12 @@ not a record of a company-server deployment or a real model/business acceptance.
 | Gate | Result |
 | --- | --- |
 | Runtime | Node 22.23.4 |
-| Complete Vitest suite | 735 passed, 7 Redis-dependent tests skipped, 0 failed; 742 total in 25 files |
-| New M1 suites | 119 passing cases: process controller 32, artifacts 70, worker/lifecycle integration 17 |
+| Complete Vitest suite | 751 passed, 7 Redis-dependent tests skipped, 0 failed; 758 total in 26 files |
+| New M1 suites | 135 passing cases: process controller 32, artifacts 70, worker/lifecycle integration 17, CLI entrypoints 16 |
 | Additional existing-suite regressions | 3 passing cases for finish confirmation and authenticated file downloads |
 | Server TypeScript build | Passed |
-| Next.js production build and static export | Passed |
-| Unit syntax | systemd 255 accepted a temporary copy with both Exec commands replaced by `/usr/bin/true`; no service was installed or started |
+| Next.js production build and static export | Passed for baseline `0893c8a`; dashboard unchanged by this entry fix; inspect the new head's Dashboard Build CI |
+| Unit syntax | At baseline, systemd 255 accepted a temporary copy with both Exec commands replaced by `/usr/bin/true`; unit unchanged by this fix, no service installed or started here |
 | Configuration/document checks | Example parsed; Bash blocks, relative links, and whitespace checked |
 
 Commands used with the Node 22 executable on PATH:
@@ -33,6 +33,38 @@ The focused model-free suite is also available as `npm run test:codex`.
 No model credentials or model service are needed for it. Temporary Hub databases,
 Bot identities, files, and subprocesses belong only to test fixtures and are
 cleaned up by the tests; they are not production or M1 deployment identities.
+
+## CLI entry regression after `0893c8a`
+
+The reported failure was reproduced with Node 22.23.4 before the fix: a real-path
+`codex-worker.mjs --help` returned exit 0 and 919 stdout bytes, while the same
+file through a `current` directory symlink returned exit 0 with no stdout. The
+URL-string guard compared the module's resolved path to the unresolved CLI path.
+
+All three relevant entrypoints now share a helper that respects the calling
+module's native `import.meta.main` boolean. Older Node versions without that
+flag use canonical filesystem paths, excluding eval/stdin and query/fragment
+imports. The Docker runtime script copy includes the helper required by the
+existing Mock runner and Demo; this does not require another pilot Hub deployment.
+
+The 16 additional cases include actual credential-free Node subprocesses:
+
+- Absolute and relative real paths, directory and file symlinks, encoded path
+  characters, and a whole-release symlink with `--preserve-symlinks-main`.
+- Actual Usage output from Codex, Mock runner, and Demo CLI entrypoints.
+- `--check` rejects absent configuration with exit 2 and a diagnostic; with
+  isolated directories and intentionally absent token/executable it emits parsed
+  `ready: false` JSON with all ten checks and exit 2. No Codex binary is invoked.
+- Wrapper and eval imports remain silent apart from an explicit test marker,
+  including when eval's `argv[1]` happens to name the imported script. Distinct
+  query/fragment imports do not start any CLI.
+- Compatibility behavior for missing paths, non-file URLs, unrelated modules,
+  and native `main: false`.
+
+The deployment runbook now requires actual Usage and this invocation's readiness
+JSON, including boolean `ready: true` and all ten passing checks. Exit 0 alone
+cannot establish readiness. The dedicated user's reported real-path preflight
+is separate field evidence; the patched `current` path still needs host validation.
 
 ## What the offline cases establish
 
@@ -69,7 +101,11 @@ handoff reports the actual remote state after publication.
 
 ## Still required on the target host
 
-The following have not been performed by this code delivery:
+The following have not been performed from this code-authoring environment.
+The deployment assistant reports that the dedicated identities, approved token,
+fresh login, baseline Hub update, and real-path local preflight are now in place;
+do not repeat provisioning. Continue the current authorized one-shot, then apply
+the worker-only patch as described in the runbook:
 
 - Creating a dedicated Unix user or Hub identity, approving its current required
   full-scope credential, or establishing a fresh Codex login.

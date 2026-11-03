@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { pathToFileURL } from 'node:url';
+import { isMainModule } from './cli-entrypoint.mjs';
 import { ConfigurationError } from './task-runner/config.mjs';
 import { runWorker, RunnerError, safeErrorMessage, ShutdownError } from './task-runner/worker.mjs';
 import { parseCodexArguments, preflight, readCodexConfiguration, readHubToken, readStateDirectory } from './codex-runner/config.mjs';
@@ -62,7 +62,7 @@ export async function main(args = process.argv.slice(2), env = process.env, { ch
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMainModule(import.meta)) {
   try { process.exitCode = await main(); } catch (error) {
     console.error(`Codex worker: ${error instanceof ConfigurationError || error instanceof RunnerError ? safeErrorMessage(error) : 'Worker stopped; inspect local state before restarting.'}`);
     process.exitCode = 2;

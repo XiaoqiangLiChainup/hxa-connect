@@ -4,6 +4,36 @@ Use the company's existing authorized channel. This is a deployment handoff for
 one dedicated Codex task worker, not a request to change Zylos itself. Follow
 [m1-codex-worker.md](m1-codex-worker.md) and the matching source commit.
 
+## Current direct-SSH patch: CLI entry after `0893c8a`
+
+Zylos has handed off to the direct-SSH deployment assistant. The dedicated user,
+member Bot, approved 24-hour full-scope token, and fresh ChatGPT login are already
+provisioned; `gpt-6.1-sol` / `medium` is configured. Reuse those approvals and
+settings. Do not recreate identities, log in again, extend token scope/lifetime,
+or repeat initial-install gates for this worker-only patch.
+
+The `0893c8a` CLI guard can return silent exit 0 through the `current` symlink.
+The already-authorized one-shot using its fixed real path can continue: do not
+interrupt the running task to apply this fix. After it finishes, stage the
+**whole new verified release**, including `scripts/cli-entrypoint.mjs`; stop and
+reconcile only the M1 worker before switching `current`.
+
+Require the new `current` path's actual `--help` Usage and actual `--check`
+readiness JSON. The JSON must have boolean `ready: true`,
+`codex_version_required: "0.166.0"`, the expected model `gpt-6.1-sol`, and a
+nonempty `checks` array with all ten names in runbook section 5 present and all
+entries boolean `passed: true`. Empty/malformed output, missing checks, an old
+journal record, or exit 0 alone is not accepted. Missing configuration may
+legitimately fail a model-free CI check; it does not establish host readiness.
+
+After validating the new symlink path, restore/remove only the recorded temporary
+mode override that pins the old real path. Preserve other drop-ins and the
+authorized `--codex --once` mode; do not accidentally enable resident polling by
+removing its mode selection. Reload and inspect the effective unit before
+continuing acceptance. No model, identity, permission, Hub image, data, database,
+or TLS change is needed for this entry fix. The remaining sections describe the
+original installation and acceptance context, not additional reprovisioning.
+
 ## Requested outcome
 
 An approved pilot Bot can receive a task through the existing M0 dashboard, have
@@ -105,7 +135,7 @@ production permissions, or install another model/credential as a workaround.
 | Full release commit and checksum | |
 | Pilot Hub old/new image IDs, old-image archive, effective image selection | |
 | Node 22, Codex `0.166.0`, systemd, effective UID and limits | |
-| Local preflight under the real unit restrictions | |
+| Actual `current`-path `--help` Usage and readiness JSON; all ten checks pass | |
 | Approved model and reasoning effort | |
 | Real task/run ID, OS exit code/signal, `reviewing` result | |
 | Actual summary, `index.html`, `README.md`, and `run-metadata.json` | |
