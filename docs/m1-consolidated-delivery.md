@@ -1,11 +1,17 @@
-# M1 Consolidated Delivery and Pilot Acceptance
+# M1 Consolidated Delivery at `4c1dfb86` (Historical Record)
 
-Date: 2026-11-03. This is the consolidated source delivery on Draft PR #3.
+Date: 2026-11-03. This records the earlier consolidated source delivery on Draft PR #3.
 Use the full commit and archive checksum in its latest release handoff; the Git
 commit containing this document is the document's version, not a moving branch
 name. Target-host installation and business acceptance are recorded separately.
 
-This is the current execution plan for the **existing company pilot**. It combines
+**The user subsequently selected implementation of the missing Zylos task API.**
+The current design, complete source extension, 20-check readiness and unified
+deployment are in [the Zylos Task runtime runbook](m1-zylos-task-runtime.md).
+The remainder of this file preserves the `4c1dfb86` assessment and Codex-only
+plan as history; it is not the procedure for the selected Zylos execution route.
+
+This was the execution plan for the **existing company pilot**. It combined
 the worker changes into one release and one target-host sequence. Use it instead
 of replaying the historical patch instructions or first-install provisioning in
 the supporting runbooks. The detailed mechanisms remain in

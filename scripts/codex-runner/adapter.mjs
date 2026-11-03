@@ -10,14 +10,13 @@ function processConfiguration(config) {
   // Deliberately enumerate fields: the Hub bearer and token-file path never cross this boundary.
   return Object.fromEntries([
     'codexBin', 'codexHome', 'homeDir', 'credentialDir', 'stateRoot', 'sandboxProfile', 'childPath', 'model', 'reasoningEffort',
-    'timeoutMs', 'termGraceMs', 'maxStdoutBytes', 'maxStderrBytes', 'maxResultBytes', 'profile',
+    'timeoutMs', 'termGraceMs', 'maxStdoutBytes', 'maxStderrBytes', 'maxResultBytes', 'profile', 'isolateStateReads',
   ].map(key => [key, config[key]]));
 }
 
-function auditArtifact(context, state, metadata, result, prepared, config) {
+function auditArtifact(context, state, metadata, result, prepared, config, identity) {
   const audit = {
-    format: 'hxa-codex-run-v1', task_id: context.task.id, run_id: context.run.id,
-    executor: 'codex-exec', codex_version_required: '0.166.0', model: config.model,
+    ...identity, task_id: context.task.id, run_id: context.run.id, model: config.model,
     reasoning_effort: config.reasoningEffort, profile: config.profile,
     execution: safeMetadata(metadata), controller_status: result.status,
     checks: result.checks,
@@ -34,13 +33,22 @@ function auditArtifact(context, state, metadata, result, prepared, config) {
     size: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') };
 }
 
-/** One dedicated subprocess at a time. Lifecycle hooks join cleanup before another claim. */
-export function createCodexExecutor(config, {
-  runProcess = runCodexProcess,
+/**
+ * Shared file-task lifecycle. Both execution and audit identity are selected by
+ * a trusted factory, never by model output, a task field, or an environment URL.
+ * Lifecycle hooks join cleanup before another claim; upload ambiguity is sticky.
+ */
+export function createArtifactExecutor(config, {
+  runProcess,
+  auditFields,
+  reportedFailure = { code: 'EXECUTOR_REPORTED_FAILURE', message: 'The execution runtime reported an unsuccessful task; inspect the private run record.' },
   prepare = prepareArtifacts,
   upload = uploadArtifacts,
   fetchImpl = globalThis.fetch,
 } = {}) {
+  if (typeof runProcess !== 'function' || typeof auditFields !== 'function') {
+    throw new RunnerError('A trusted execution runtime and audit projector are required.', { code: 'EXECUTOR_CONFIGURATION' });
+  }
   const entries = new Map();
   let cleanupSafe = true;
   let reconciliationRequired = false;
@@ -75,10 +83,12 @@ export function createCodexExecutor(config, {
         cleanupSafe = metadata.cleanupComplete === true;
         if (!cleanupSafe) throw new RunnerError('Executor cleanup could not be confirmed.', { code: 'EXECUTOR_CLEANUP_FAILED' });
         signal.throwIfAborted();
+        // Validate native provenance before any model result or file is published.
+        const identity = auditFields(executed, context);
         const { result } = executed;
         state.phase('validating', { executor: metadata });
         if (result.status !== 'succeeded') {
-          throw new RunnerError('Codex reported that the task was unsuccessful; inspect the private run record.', { code: 'CODEX_REPORTED_FAILURE' });
+          throw new RunnerError(reportedFailure.message, { code: reportedFailure.code });
         }
         const prepared = await prepare({ workspaceDir: state.workspaceDir, result, config, signal });
         if (prepared.some(item => item.name.toLowerCase() === 'run-metadata.json')) {
@@ -87,7 +97,7 @@ export function createCodexExecutor(config, {
         if (prepared.some(item => item.bytes.includes(Buffer.from(config.token)))) {
           throw new RunnerError('An artifact contains a protected credential and was not published.', { code: 'PROTECTED_ARTIFACT_CONTENT' });
         }
-        const audit = auditArtifact(context, state, metadata, result, prepared, config);
+        const audit = auditArtifact(context, state, metadata, result, prepared, config, identity);
         const allArtifacts = [...prepared, audit];
         if (allArtifacts.reduce((total, item) => total + item.size, 0) > config.maxArtifactBytes) {
           throw new RunnerError('Artifacts and run metadata exceed the configured total.', { code: 'ARTIFACT_TOTAL_LIMIT' });
@@ -145,4 +155,18 @@ export function createCodexExecutor(config, {
     async drain() { await Promise.allSettled([...entries.values()].map(entry => entry.promise)); },
     canReleaseLock: () => cleanupSafe && !reconciliationRequired && entries.size === 0,
   };
+}
+
+/** Existing Codex entry point, with its original process and audit semantics. */
+export function createCodexExecutor(config, {
+  runProcess = runCodexProcess,
+  prepare = prepareArtifacts,
+  upload = uploadArtifacts,
+  fetchImpl = globalThis.fetch,
+} = {}) {
+  return createArtifactExecutor(config, {
+    runProcess, prepare, upload, fetchImpl,
+    auditFields: () => ({ format: 'hxa-codex-run-v1', executor: 'codex-exec', codex_version_required: '0.166.0' }),
+    reportedFailure: { code: 'CODEX_REPORTED_FAILURE', message: 'Codex reported that the task was unsuccessful; inspect the private run record.' },
+  });
 }

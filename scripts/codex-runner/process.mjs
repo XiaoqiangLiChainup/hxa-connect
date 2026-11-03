@@ -14,6 +14,12 @@ const PROC_POLL_MS = 25;
 const KILL_WAIT_MS = 2_000;
 const PIPE_DRAIN_MS = 2_000;
 const MAX_EVENT_LOG_BYTES = 262_144;
+const MAX_ZYLOS_INSTRUCTION_BYTES = 131_072;
+const MAX_ZYLOS_PROGRESS_EVENTS = 2048;
+const ZYLOS_CONTEXT_KEYS = Object.freeze([
+  'api', 'task_id', 'run_id', 'attempt', 'execution_id', 'instruction_path',
+  'instruction_sha256', 'memory_sha256', 'payload_sha256',
+]);
 const SAFE_EVENT_TYPES = new Set([
   'thread.started', 'turn.started', 'turn.completed', 'turn.failed',
   'item.started', 'item.updated', 'item.completed', 'error',
@@ -89,6 +95,9 @@ function validateConfiguration(configuration) {
   config.profile ??= 'feedback-demo';
   if (!['files', 'feedback-demo'].includes(config.profile)) {
     throw new CodexExecutionError('CODEX_CONFIG_INVALID', 'Unknown Codex execution profile.');
+  }
+  if (config.isolateStateReads !== undefined && typeof config.isolateStateReads !== 'boolean') {
+    throw new CodexExecutionError('CODEX_CONFIG_INVALID', 'State isolation must be an explicit boolean.');
   }
   return config;
 }
@@ -313,6 +322,66 @@ function makePrompt(task, run, profile) {
   ].join('\n');
 }
 
+/**
+ * A native Zylos context is accepted only from the trusted Core driver call,
+ * separately from task/model JSON. Snapshot and verify the actual instruction
+ * bytes before prepending them to stdin; the model cannot author driver proof.
+ */
+function zylosInstructions(context, { task, run, controlDir, config, onProgress }) {
+  const invalid = () => { throw new CodexExecutionError('ZYLOS_EXECUTION_CONTEXT_INVALID', 'The native Zylos execution context could not be verified.'); };
+  if (!context || typeof context !== 'object' || Array.isArray(context)
+    || Object.keys(context).length !== ZYLOS_CONTEXT_KEYS.length
+    || ZYLOS_CONTEXT_KEYS.some(key => !Object.hasOwn(context, key))
+    || context.api !== 'zylos-task-v1' || context.task_id !== task?.id || context.run_id !== run?.id
+    || !Number.isSafeInteger(run?.attempt) || run.attempt < 1 || context.attempt !== run.attempt
+    || typeof context.execution_id !== 'string'
+    || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u.test(context.execution_id)
+    || config.isolateStateReads !== true || typeof onProgress !== 'function') invalid();
+  for (const key of ['instruction_sha256', 'memory_sha256', 'payload_sha256']) {
+    if (typeof context[key] !== 'string' || !/^[0-9a-f]{64}$/u.test(context[key])) invalid();
+  }
+  const directory = path.join(controlDir, 'zylos');
+  const filename = path.join(directory, 'AGENTS.md');
+  if (context.instruction_path !== filename) invalid();
+  let fd;
+  try {
+    existingDirectory(directory, 'Zylos control directory');
+    if (fs.realpathSync(filename) !== filename) invalid();
+    const first = fs.lstatSync(filename);
+    if (!first.isFile() || first.isSymbolicLink() || first.nlink !== 1
+      || first.size < 1 || first.size > MAX_ZYLOS_INSTRUCTION_BYTES) invalid();
+    fd = fs.openSync(filename, fs.constants.O_RDONLY | fs.constants.O_NOFOLLOW | fs.constants.O_NONBLOCK);
+    const before = fs.fstatSync(fd);
+    if (!before.isFile() || before.nlink !== 1 || before.dev !== first.dev || before.ino !== first.ino
+      || before.size !== first.size || before.mtimeMs !== first.mtimeMs || before.ctimeMs !== first.ctimeMs) invalid();
+    const bytes = Buffer.alloc(before.size + 1);
+    let count = 0;
+    while (count < bytes.length) {
+      const read = fs.readSync(fd, bytes, count, bytes.length - count, count);
+      if (!read) break;
+      count += read;
+    }
+    const after = fs.fstatSync(fd);
+    const current = fs.lstatSync(filename);
+    if (count !== before.size || after.size !== before.size || after.mtimeMs !== before.mtimeMs
+      || after.ctimeMs !== before.ctimeMs || after.nlink !== 1 || current.dev !== before.dev
+      || current.ino !== before.ino || current.nlink !== 1 || fs.realpathSync(filename) !== filename) invalid();
+    const snapshot = bytes.subarray(0, count);
+    const digest = crypto.createHash('sha256').update(snapshot).digest('hex');
+    if (digest !== context.instruction_sha256) invalid();
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(snapshot);
+    if (!text.trim() || text.includes('\0')) invalid();
+    return {
+      text,
+      proof: Object.freeze(Object.fromEntries(ZYLOS_CONTEXT_KEYS.map(key => [key,
+        key === 'instruction_sha256' ? digest : context[key],
+      ]))),
+    };
+  } catch {
+    invalid();
+  } finally { if (fd !== undefined) fs.closeSync(fd); }
+}
+
 function readResult(filename, maximum) {
   const first = fs.lstatSync(filename);
   if (!first.isFile() || first.isSymbolicLink() || first.nlink !== 1) {
@@ -352,7 +421,7 @@ function readResult(filename, maximum) {
  * Execute exactly one Linux Codex process. No caller environment is inherited.
  * No raw model events, prompts, tool output, or stderr are written to logs.
  */
-export async function runCodexProcess({ task, run, workspaceDir, controlDir, logsDir, config: suppliedConfig, signal }) {
+export async function runCodexProcess({ task, run, workspaceDir, controlDir, logsDir, config: suppliedConfig, signal, zylosContext, onProgress }) {
   const metadata = {
     task_id: task?.id, run_id: run?.id, pid: null, pgid: null, session: null, startTime: null,
     exitCode: null, exitSignal: null, startedAt: null, endedAt: null,
@@ -360,12 +429,15 @@ export async function runCodexProcess({ task, run, workspaceDir, controlDir, log
     failedTerminal: false, termSent: false, killSent: false, descendantsObserved: 0,
     cleanupComplete: false, pipesClosed: false, eventLogTruncated: false, usage: null,
   };
-  if (signal?.aborted) throw new CodexExecutionError(ABORTED().code, ABORTED().message, metadata);
+  if (signal?.aborted) {
+    if (zylosContext !== undefined) { metadata.cleanupComplete = true; metadata.pipesClosed = true; }
+    throw new CodexExecutionError(ABORTED().code, ABORTED().message, metadata);
+  }
   if (process.platform !== 'linux' || typeof process.getuid !== 'function') {
     throw new CodexExecutionError('CODEX_PLATFORM_UNSUPPORTED', 'The process controller requires Linux /proc identity verification.', metadata);
   }
 
-  let config, prompt, schemaPath, resultPath, identityPath, stderrPath, eventFd;
+  let config, prompt, schemaPath, resultPath, identityPath, stderrPath, eventFd, zylosProof;
   try {
     config = validateConfiguration(suppliedConfig);
     workspaceDir = existingDirectory(workspaceDir, 'Workspace');
@@ -378,6 +450,13 @@ export async function runCodexProcess({ task, run, workspaceDir, controlDir, log
       throw new CodexExecutionError('CODEX_CONFIG_INVALID', 'Workspace, credentials, control files, and logs must be separated.');
     }
     prompt = makePrompt(task, run, config.profile);
+    if (zylosContext !== undefined) {
+      const native = zylosInstructions(zylosContext, { task, run, controlDir, config, onProgress });
+      zylosProof = native.proof;
+      prompt = `ZYLOS NATIVE TASK INSTRUCTIONS\n${native.text}\nEND ZYLOS NATIVE TASK INSTRUCTIONS\n\n${prompt}`;
+    } else if (onProgress !== undefined) {
+      throw new CodexExecutionError('ZYLOS_EXECUTION_CONTEXT_INVALID', 'Native progress requires a verified Zylos execution context.');
+    }
     const temporary = path.join(workspaceDir, '.tmp');
     try { fs.mkdirSync(temporary, { mode: 0o700 }); } catch (error) { if (error?.code !== 'EEXIST') throw error; }
     existingDirectory(temporary, 'Workspace temporary directory');
@@ -398,6 +477,7 @@ export async function runCodexProcess({ task, run, workspaceDir, controlDir, log
     };
   } catch (error) {
     if (eventFd !== undefined) fs.closeSync(eventFd);
+    if (zylosContext !== undefined) { metadata.cleanupComplete = true; metadata.pipesClosed = true; }
     if (error instanceof CodexExecutionError) { error.metadata = metadata; throw error; }
     throw new CodexExecutionError('CODEX_SETUP_FAILED', 'Codex run directories or control files could not be prepared.', metadata);
   }
@@ -411,6 +491,32 @@ export async function runCodexProcess({ task, run, workspaceDir, controlDir, log
   const requestStop = reason => {
     if (!stopReason) { stopReason = reason; stopped.resolve(); }
   };
+  let progressSequence = 0;
+  let progressChain = Promise.resolve();
+  const queueProgress = type => {
+    if (!zylosProof || stopReason || progressSequence >= MAX_ZYLOS_PROGRESS_EVENTS) return;
+    const event = Object.freeze({
+      api: zylosProof.api, task_id: zylosProof.task_id, run_id: zylosProof.run_id,
+      attempt: zylosProof.attempt, execution_id: zylosProof.execution_id,
+      sequence: ++progressSequence, type,
+    });
+    progressChain = progressChain.then(async () => {
+      if (stopReason) return;
+      let timer;
+      try {
+        const accepted = await Promise.race([
+          Promise.resolve().then(() => onProgress(event)),
+          stopped.promise.then(() => false),
+          new Promise(resolve => { timer = setTimeout(() => resolve(false), Math.min(5000, config.timeoutMs)); }),
+        ]);
+        if (accepted !== true && !stopReason) {
+          requestStop(failure('ZYLOS_PROGRESS_REJECTED', 'The native Zylos runtime did not accept execution progress.'));
+        }
+      } catch {
+        requestStop(failure('ZYLOS_PROGRESS_REJECTED', 'The native Zylos runtime could not persist execution progress.'));
+      } finally { clearTimeout(timer); }
+    });
+  };
   const onAbort = () => requestStop(ABORTED());
   const cleanAndDrain = async () => {
     cleanupAttempted = true;
@@ -420,6 +526,7 @@ export async function runCodexProcess({ task, run, workspaceDir, controlDir, log
       metadata.cleanupComplete = false;
     }
     if (child) await waitBounded(closed.promise, PIPE_DRAIN_MS);
+    if (!child && zylosProof) metadata.pipesClosed = true;
     if (child && !metadata.pipesClosed) metadata.cleanupComplete = false;
   };
 
@@ -457,6 +564,7 @@ export async function runCodexProcess({ task, run, workspaceDir, controlDir, log
       eventLogBytes += bytes;
       metadata.loggedEventCount++;
     } else metadata.eventLogTruncated = true;
+    if (type !== 'unknown') queueProgress('progress');
   };
 
   const consumeText = text => {
@@ -560,11 +668,16 @@ export async function runCodexProcess({ task, run, workspaceDir, controlDir, log
     signal?.addEventListener('abort', onAbort, { once: true });
     if (signal?.aborted) onAbort();
     timeout = setTimeout(() => requestStop(failure('CODEX_TIMEOUT', 'Codex exceeded the configured execution timeout.')), config.timeoutMs);
+    if (!stopReason && zylosProof) {
+      queueProgress('started');
+      await progressChain;
+    }
     if (!stopReason) child.stdin.end(prompt, 'utf8');
     else child.stdin.destroy();
 
     await Promise.race([exited.promise, stopped.promise]);
     await cleanAndDrain();
+    await progressChain;
     if (!stdoutEnded && !stopReason) requestStop(failure('CODEX_STREAM_FAILED', 'Codex output did not close cleanly.'));
     if (!metadata.cleanupComplete) {
       throw new CodexExecutionError('CODEX_CLEANUP_FAILED', 'Codex process cleanup could not be confirmed; stop this worker and reconcile its process journal.', metadata);
@@ -582,7 +695,7 @@ export async function runCodexProcess({ task, run, workspaceDir, controlDir, log
       }
       throw new CodexExecutionError('CODEX_RESULT_MISSING', 'Codex did not produce a readable final result file.', metadata);
     }
-    return { result, metadata };
+    return zylosProof ? { result, metadata, zylosProof } : { result, metadata };
   } catch (error) {
     if (!(error instanceof CodexExecutionError)) metadata.controlErrorCode = safeErrorCode(error);
     if (!cleanupAttempted) {
@@ -599,6 +712,7 @@ export async function runCodexProcess({ task, run, workspaceDir, controlDir, log
   } finally {
     clearTimeout(timeout);
     signal?.removeEventListener('abort', onAbort);
+    await progressChain;
     metadata.endedAt = Date.now();
     if (child && !metadata.pipesClosed) {
       child.stdin?.destroy();

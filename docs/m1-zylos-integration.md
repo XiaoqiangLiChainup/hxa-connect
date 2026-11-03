@@ -1,13 +1,26 @@
-# M1: existing Zylos integration boundary
+# M1: Unpatched Shared Zylos 0.5.2 Interface Assessment
 
-## Delivery status
+## Scope and later implemented extension
 
-**This release must not claim that it provides a deployable task executor for the
-existing shared Zylos instance.** The supported M1 execution implementation is the
+The deployment assistant has now confirmed that all twelve inspected files in
+the real `/root/zylos` instance match the pinned source below. That remains
+static source evidence, not a runtime or model acceptance.
+
+After this assessment, the user explicitly selected engineering of the missing
+task API. The complete project-maintained `0.5.2+hxa.task.1` Core extension and
+its real platform execution path are delivered in
+[the Zylos Task runtime runbook](m1-zylos-task-runtime.md). The old shared instance
+remains unchanged. The limitations below describe **unpatched shared 0.5.2**;
+they do not mean that the new isolated Core extension is still a static checker.
+
+## Baseline delivery status at `4c1dfb86`
+
+**The `4c1dfb86` baseline did not provide a deployable task executor for the
+existing shared Zylos instance.** Its supported execution implementation was the
 separate Codex worker described in [m1-codex-worker.md](m1-codex-worker.md). It is a
 Codex execution backend, not a renamed Zylos adapter.
 
-For an existing Zylos installation, this release provides source inspection and
+For an existing unpatched Zylos installation, that baseline provided source inspection and
 a static eligibility decision that always reports execution as unsupported.
 It is not an active Hub or Codex-worker authorization gate; no Zylos Task
 consumer or C4 dispatch path is shipped or registered. It never claims a Hub
@@ -21,8 +34,8 @@ Those are deployment reports, not observations made by this repository's tests.
 No company server, live conversation, authentication file, or model invocation
 was accessed during the source audit.
 
-See [the consolidated handoff](m1-consolidated-delivery.md) for the current direct-SSH
-deployment assistant's procedure. Zylos has handed off deployment; this delivery
+See [the Task runtime handoff](m1-zylos-task-runtime.md) for the current direct-SSH
+deployment assistant's procedure. Zylos has handed off deployment; the new delivery
 does not require sending it a message. Acting as an installation assistant and
 being the platform's task execution backend are different capabilities.
 

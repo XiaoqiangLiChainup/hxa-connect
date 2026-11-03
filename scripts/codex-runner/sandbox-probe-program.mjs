@@ -26,6 +26,15 @@ function deniedWrite(filename) {
   } catch {}
   result.outside_write_denied = deniedWrite(input.outside);
   result.credential_reads_denied = input.canaries.every(deniedRead) && input.aliases.every(deniedRead);
+  if (input.taskHistory !== undefined) {
+    const valid = input.taskHistory && typeof input.taskHistory.canary === 'string'
+      && typeof input.taskHistory.alias === 'string';
+    // Evaluate both paths even if one is readable, so the negative control also
+    // exercises the workspace alias. These are controller-created markers only.
+    const directDenied = valid ? deniedRead(input.taskHistory.canary) : false;
+    const aliasDenied = valid ? deniedRead(input.taskHistory.alias) : false;
+    result.task_history_reads_denied = directDenied && aliasDenied;
+  }
   result.network_restricted = await new Promise(resolve => {
     const socket = net.connect({ host: '127.0.0.1', port: input.port });
     let done = false;

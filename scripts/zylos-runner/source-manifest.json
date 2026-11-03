@@ -1,0 +1,1612 @@
+{
+  "format": "hxa-zylos-task-source-v1",
+  "api": "zylos-task-v1",
+  "core_commit": "8ee9bd9007edab46f766f3574e0ad56cf69268c2",
+  "core_version": "0.5.2",
+  "extension_id": "hxa-m1-zylos-task-v1",
+  "extension_version": "0.5.2+hxa.task.1",
+  "patch_sha256": "7cc19f3c0b14e0fc845cefd1d50517c199a4130cabc6189e712ff8e2cef29684",
+  "upstream_manifest_sha256": "0f484fd198876667275440363048875675c4e99cee6c593191c9fd3bfc82446d",
+  "files": [
+    {
+      "path": ".dockerignore",
+      "mode": 420,
+      "sha256": "919a47e0699fb8d8ebd5bb2a9e07562cc4d3e26504af18ca853a0c02b331d6bd"
+    },
+    {
+      "path": ".github/workflows/docker-publish.yml",
+      "mode": 420,
+      "sha256": "7cbcc269de2358f2a646577a3ccbf8020ed754fbdc8e38f474affcd328b98c5a"
+    },
+    {
+      "path": ".gitignore",
+      "mode": 420,
+      "sha256": "3262029e0b6e48db97e006854b9f2b5222728374db7faf6bd67d010b4e6ff26e"
+    },
+    {
+      "path": ".npmignore",
+      "mode": 420,
+      "sha256": "a5e1a04581a77759bb77c6f0971ccede423795bc365a9a6155e4e141701cda55"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "mode": 420,
+      "sha256": "8902e10a3a59ced8ef2d5003ba8463b9e9d58c328579a6271b695e98d3517c07"
+    },
+    {
+      "path": "CLAUDE.md",
+      "mode": 420,
+      "sha256": "40783e7f59d1207d0070f4e1f0d2b74c936d26510f24585ff8ccc63825d457ce"
+    },
+    {
+      "path": "Dockerfile",
+      "mode": 420,
+      "sha256": "0f09bd0adb395482c50fe3e2f07b90e9211effb3d34cac619b041ddd1a849020"
+    },
+    {
+      "path": "LICENSE",
+      "mode": 420,
+      "sha256": "f8fb94432e6495c088ec0154ed935157ec1fb7a1ee7fcbaaef40238f2243389e"
+    },
+    {
+      "path": "README.md",
+      "mode": 420,
+      "sha256": "4f295689dc19f0c8118202b6f59d12bbf1dfccfa68fbe3b32a23b1b441dc2d2e"
+    },
+    {
+      "path": "README.zh-CN.md",
+      "mode": 420,
+      "sha256": "87954d58aa62509e4ea8046d0e2484f18c4547445dbed2d47a6f8f83b3547e2f"
+    },
+    {
+      "path": "VERSION",
+      "mode": 420,
+      "sha256": "e9dd8507f4bf0c6f42458e41aea833ad0bd3f6127272335eee9bf4d58541ed67"
+    },
+    {
+      "path": "assets/coco-logo.png",
+      "mode": 420,
+      "sha256": "af36eb7267472c470281b629acd8a9e5bad30b003ae8dce321072946eb241b0b"
+    },
+    {
+      "path": "assets/logo.png",
+      "mode": 420,
+      "sha256": "3a66308e5f1de861af6e3448dac4280fdb27ed4395c248606a20d80427e2fe94"
+    },
+    {
+      "path": "assets/posters/architecture-en.png",
+      "mode": 420,
+      "sha256": "81dd0b8bd4f4c37404605bec2af66166e6449e97cb2668921da22d99f068e7b3"
+    },
+    {
+      "path": "assets/posters/architecture-zh.png",
+      "mode": 420,
+      "sha256": "fe0b2a234a400a45b3109be4edf540c585bd7c1533ea7d959c576c52441f6e79"
+    },
+    {
+      "path": "assets/posters/infinite-context-en.png",
+      "mode": 420,
+      "sha256": "4c3b95e743a399650cbee73274f3947bf21832aa8031a2096b07902bf9d3453e"
+    },
+    {
+      "path": "assets/posters/infinite-context-zh.png",
+      "mode": 420,
+      "sha256": "ec314a1b2275d9ff28ad923c45f78fce55b0d4479e700cb0dcdca1d594e3725a"
+    },
+    {
+      "path": "assets/posters/lifecycle-en.png",
+      "mode": 420,
+      "sha256": "5a41790c7e2d135ac86b5a999f4a4bb42d601bc6c1d96b8f9cf60ef414f3af94"
+    },
+    {
+      "path": "assets/posters/lifecycle-zh.png",
+      "mode": 420,
+      "sha256": "74ef4d1ebd1ed8c0b10e886d0a3f1a338658fcd39abb4e627a3408d6bed2a710"
+    },
+    {
+      "path": "assets/posters/memory-en.png",
+      "mode": 420,
+      "sha256": "3fc09f258ab248c3872e731c909afe270d6fb8d9f69a6100a73c2125cdd5c865"
+    },
+    {
+      "path": "assets/posters/memory-zh.png",
+      "mode": 420,
+      "sha256": "8708a617775f953c073cc985ebdddb1e33870d55be1cd7a6bf7e4c5cfab2f011"
+    },
+    {
+      "path": "assets/posters/unified-context-en.png",
+      "mode": 420,
+      "sha256": "4df5fb444a316252dd7482f904b3d6df052012f66304504e44c2ff1753853872"
+    },
+    {
+      "path": "assets/posters/unified-context-zh.png",
+      "mode": 420,
+      "sha256": "d5c31daf1e1524ea95f597995fbdd58fdfd9f52075bd8bee2e7bf36da36f57d1"
+    },
+    {
+      "path": "cli/commands/add.js",
+      "mode": 420,
+      "sha256": "9602d77e2e229b4851b8bd25df0781f3fb3e874a943e6820bc1d5da6c249defc"
+    },
+    {
+      "path": "cli/commands/attach.js",
+      "mode": 420,
+      "sha256": "5bdacf66bbb23ffe4bb49115f3e8a859b1cbd8cd20f9bffb1792496fc3535843"
+    },
+    {
+      "path": "cli/commands/component.js",
+      "mode": 420,
+      "sha256": "c506ab06726d259665bc10849a0d3803aa904453a39a344348cf4c05409c706c"
+    },
+    {
+      "path": "cli/commands/config.js",
+      "mode": 420,
+      "sha256": "d8d9c29248ef9b8244fbd084d519253e7c4796ad34d60596b99e2975372039f7"
+    },
+    {
+      "path": "cli/commands/doctor.js",
+      "mode": 420,
+      "sha256": "753881af0c5f00cd1e64dfa3457ec92e84db521e41142d040a437cf6dfc44658"
+    },
+    {
+      "path": "cli/commands/init.js",
+      "mode": 420,
+      "sha256": "0337140d40abfb3e53a017766120882c73d45de500102c10f7744150f31bc3b9"
+    },
+    {
+      "path": "cli/commands/runtime.js",
+      "mode": 420,
+      "sha256": "636147fa3c5541f6b8871971593cd586da9b9e281b3435f9e2b113d0b1f5d6ab"
+    },
+    {
+      "path": "cli/commands/self-uninstall.js",
+      "mode": 420,
+      "sha256": "2776342ac357dcca536f033daee1e61d23b424d69a7e80001eab48c5ca58b4a4"
+    },
+    {
+      "path": "cli/commands/service.js",
+      "mode": 420,
+      "sha256": "42745daa2120f75eddfacebad5e4cd5cbeca78ebc9f2ae468c2720bf8cd2930b"
+    },
+    {
+      "path": "cli/commands/shell.js",
+      "mode": 420,
+      "sha256": "bec3fae27bd4ac32e5a0fec141eaf584371682806b5a2a352f6785e2dcccd362"
+    },
+    {
+      "path": "cli/lib/__tests__/bin.test.js",
+      "mode": 420,
+      "sha256": "5c316c134290d0e276457d09818cf95ae6ea16b08d33d9675bbacc16fcf66e0e"
+    },
+    {
+      "path": "cli/lib/__tests__/codex.test.js",
+      "mode": 420,
+      "sha256": "727649234ad28534572c7b8bb9ee0393ac2347710d4b4cd4cd59e83e356a40ca"
+    },
+    {
+      "path": "cli/lib/__tests__/configure-hook.test.js",
+      "mode": 420,
+      "sha256": "7652ccb28a049e11d64d7cb30893e48939dd3ca8301a3fa9579ce3738dfd8823"
+    },
+    {
+      "path": "cli/lib/__tests__/diff3.test.js",
+      "mode": 420,
+      "sha256": "b9ffa5e4e68e19954ef570968e91c9f582949c1c0a18ab49a02092a4abc276a6"
+    },
+    {
+      "path": "cli/lib/__tests__/fs-utils.test.js",
+      "mode": 420,
+      "sha256": "e78181f3c3676fa0aa2949655c0a353823f3321acd285a82b4de362a075d9c00"
+    },
+    {
+      "path": "cli/lib/__tests__/heartbeat-api-error-patterns.test.js",
+      "mode": 420,
+      "sha256": "0d100e9bf4089bbba8e55c742b17d2b0cdcd844bec6e1a508336da0e63dd31c9"
+    },
+    {
+      "path": "cli/lib/__tests__/init-base-url.test.js",
+      "mode": 420,
+      "sha256": "1453c2afd452a77a546a11ab6927a9d0bef01475031b0ea65cef1fca13da95c7"
+    },
+    {
+      "path": "cli/lib/__tests__/pm2.test.js",
+      "mode": 420,
+      "sha256": "b360ae3c1b9b34d930135acad3fb7aa9211aa3a884159ebb21b8958f0982abad"
+    },
+    {
+      "path": "cli/lib/__tests__/runtime-base-url.test.js",
+      "mode": 420,
+      "sha256": "5cb1fe9a1aa58437b8b8fda89d9ef7cdf4d9c07547395fc5c669c21fc4796788"
+    },
+    {
+      "path": "cli/lib/__tests__/runtime-launch.test.js",
+      "mode": 420,
+      "sha256": "7c83b372e4bc74b85821ddc41a802b181938247181581003819290ac0eac1059"
+    },
+    {
+      "path": "cli/lib/__tests__/runtime-setup.test.js",
+      "mode": 420,
+      "sha256": "8c7a7050be4e520104051f1b4e6cc6261ad3c44ba6501fda38c0d409840501e6"
+    },
+    {
+      "path": "cli/lib/__tests__/self-upgrade.test.js",
+      "mode": 420,
+      "sha256": "75e15fffa630834059599837749cc9e826098fcf79c01c0d1e6211de4981f8e7"
+    },
+    {
+      "path": "cli/lib/__tests__/service-restart.test.js",
+      "mode": 420,
+      "sha256": "c6079c15c812f01035874ede72b0cf81622c46530dc58ca165db1d80be19d2c0"
+    },
+    {
+      "path": "cli/lib/__tests__/session-handoff.test.js",
+      "mode": 420,
+      "sha256": "be34e0c6707d5bc667f503bc6b7063855bb8acae47c09a43dfcacdeeab328a14"
+    },
+    {
+      "path": "cli/lib/__tests__/skill.test.js",
+      "mode": 420,
+      "sha256": "e1a6c33aa8266acda4009beb01aa59621515b53845e67e5f1734470d0b1bb3a3"
+    },
+    {
+      "path": "cli/lib/__tests__/sync-settings-hooks.test.js",
+      "mode": 420,
+      "sha256": "5f38f55cbc5320a68ab6cca9ca51f9fcb89cce5cdc303bbd25d36a26c0d71bef"
+    },
+    {
+      "path": "cli/lib/__tests__/tmux-env.test.js",
+      "mode": 420,
+      "sha256": "2e57e8087f7ad8f0528e111d076961656ba844e17d72fdf2dabee300dc53be2a"
+    },
+    {
+      "path": "cli/lib/__tests__/tmux-launcher.test.js",
+      "mode": 420,
+      "sha256": "348ae0bc044acb3cc1594b1b3befe2306439a7783dd527d4241810cffed3edec"
+    },
+    {
+      "path": "cli/lib/__tests__/upgrade-restart.test.js",
+      "mode": 420,
+      "sha256": "7cf077fa12516bfdc2b69b90712b3f96e4f43b81bc89a7b0b674050de23fb39f"
+    },
+    {
+      "path": "cli/lib/bin.js",
+      "mode": 420,
+      "sha256": "ef4ae2f0213786317bd795be7abc84dba997f4e61943a6d527998f4510fccc9b"
+    },
+    {
+      "path": "cli/lib/caddy.js",
+      "mode": 420,
+      "sha256": "b3e39a0c37edeea8df0c2983c75837d0803f189f7424a7e167b69e6d27b6f5ed"
+    },
+    {
+      "path": "cli/lib/claude-eval.js",
+      "mode": 420,
+      "sha256": "c1642afc181b81bfdd5c92546655e6b852fc831c52948299cea620db9b50d5d3"
+    },
+    {
+      "path": "cli/lib/colors.js",
+      "mode": 420,
+      "sha256": "03fd3588fc1fd28045d4c5466fefd97e7db6a0d4f67a8c38e8f5d40423447697"
+    },
+    {
+      "path": "cli/lib/components.js",
+      "mode": 420,
+      "sha256": "9a502bdcb30637062e5970d0f73c90c671877aad148bc522ee468e9179079787"
+    },
+    {
+      "path": "cli/lib/config.js",
+      "mode": 420,
+      "sha256": "5acbbbf39a3a9b104562285c72e35d33bcb697a1172ba9ef50afad262a38e62e"
+    },
+    {
+      "path": "cli/lib/configure-hook.js",
+      "mode": 420,
+      "sha256": "22649f1bb3dd80803010a0a7d0788d5c78b4f05b59fab2f613295d5365ed7c60"
+    },
+    {
+      "path": "cli/lib/diff3.js",
+      "mode": 420,
+      "sha256": "f1b723ae95c4cedc0081d83a328e311c7195ab8be00f5f6c7ace9ee1de3e06f4"
+    },
+    {
+      "path": "cli/lib/download.js",
+      "mode": 420,
+      "sha256": "1b353bc3a57787c572ef2bc8e50cf5c4089fe013da63e18cfb2bccf0d2c965d3"
+    },
+    {
+      "path": "cli/lib/env.js",
+      "mode": 420,
+      "sha256": "0e3546111cc3394f11bad84dfc6f0e854019f5b6bb19b634e4f85c670e2a7b06"
+    },
+    {
+      "path": "cli/lib/fs-utils.js",
+      "mode": 420,
+      "sha256": "f0e8b0531f6d2aaa58d56a23c1d9dd32296a422545556f1716878269078ecdb0"
+    },
+    {
+      "path": "cli/lib/github.js",
+      "mode": 420,
+      "sha256": "8ac1279b591cc2d98a4ea9eac94e4eb928bf8923060a9411fa78021bbbdabeb3"
+    },
+    {
+      "path": "cli/lib/heartbeat/api-error-patterns.js",
+      "mode": 420,
+      "sha256": "b8403e34e875e12c6e0e43c7ababa2aa7fce3b683def54c56b045fd805654d55"
+    },
+    {
+      "path": "cli/lib/heartbeat/claude-probe.js",
+      "mode": 420,
+      "sha256": "60e1b836ec514d4b54fac12900e86f6c9e3ba08834531583565843f9cf14edb1"
+    },
+    {
+      "path": "cli/lib/heartbeat/codex-probe.js",
+      "mode": 420,
+      "sha256": "04978882477a7515d8a0dbb3eccb779260453f848ad37d6763985bbee3e8a61c"
+    },
+    {
+      "path": "cli/lib/hook-utils.js",
+      "mode": 420,
+      "sha256": "7ae6c0c56fa190c473bdbb76a5e6d9726eaed72c0843ac41eb4e23eae8d74cd7"
+    },
+    {
+      "path": "cli/lib/lock.js",
+      "mode": 420,
+      "sha256": "7f61f0f0fcb6096454a1439c8908b9d797275add628579d8616a944823dcf38a"
+    },
+    {
+      "path": "cli/lib/manifest.js",
+      "mode": 420,
+      "sha256": "44a067c62168e326e171d7e5cf0a4f6a4bae1d0ca3867d5924894e3ca3811dfd"
+    },
+    {
+      "path": "cli/lib/migrate.js",
+      "mode": 420,
+      "sha256": "1433f81de4e92d85f1adff32929e644e47140cb8380f17c7ef297c220f7dfcd8"
+    },
+    {
+      "path": "cli/lib/pm2.js",
+      "mode": 420,
+      "sha256": "5a3d28078c379d8f692ebb96acca91c36cf9da9a0a24c518a7abe8b4cde08c38"
+    },
+    {
+      "path": "cli/lib/prompts.js",
+      "mode": 420,
+      "sha256": "fddf1cc6f21c34143884497d5e8a41413356c03241e54e56771975df8d132180"
+    },
+    {
+      "path": "cli/lib/registry.js",
+      "mode": 420,
+      "sha256": "c7652ac44db4800be722800e4a457fbe7d1d6c08e37a525a7f2882b3b9a19873"
+    },
+    {
+      "path": "cli/lib/runtime-setup.js",
+      "mode": 420,
+      "sha256": "51266374f5a4b1bae4170873f6153e8849812c9776a414268cd01899e528c3a2"
+    },
+    {
+      "path": "cli/lib/runtime/__tests__/tmux-helpers.test.js",
+      "mode": 420,
+      "sha256": "b376b78b16a07d5183bf3bfb50d1af99e6ab2a9321a1dce677ab798d33b33b04"
+    },
+    {
+      "path": "cli/lib/runtime/base.js",
+      "mode": 420,
+      "sha256": "6c6bf2cf1ce2c2d89a0228379dfca4e701e8f6d5ccc1877b3d76ef9155b5f30f"
+    },
+    {
+      "path": "cli/lib/runtime/claude-context-monitor.js",
+      "mode": 420,
+      "sha256": "a6c41c629778ca2af8e614c6c2697130e9c7c0c16d9922de4d8c5a848ee2bc34"
+    },
+    {
+      "path": "cli/lib/runtime/claude.js",
+      "mode": 420,
+      "sha256": "a21b74db2a8cd3d523315ac04390bba63d07d911f262663dc0eed9f6ef331deb"
+    },
+    {
+      "path": "cli/lib/runtime/codex-context-monitor.js",
+      "mode": 420,
+      "sha256": "b250bf10ede0aa41c378d9018dab8be81c16b1f9e25e60f050d81398e7de101c"
+    },
+    {
+      "path": "cli/lib/runtime/codex.js",
+      "mode": 420,
+      "sha256": "043558d8469dfbef7543b00c8b8d14e9bd7c80b22e58e0190465bd1126a92d84"
+    },
+    {
+      "path": "cli/lib/runtime/context-monitor-base.js",
+      "mode": 420,
+      "sha256": "67175b76e62e5f809d64a35ae2f5cb5b817cfd5da46d05667464611cc404f516"
+    },
+    {
+      "path": "cli/lib/runtime/index.js",
+      "mode": 420,
+      "sha256": "7fe3ab6a05d9afd9fa82de70fb871451d1080de742e01beb632cc6dc5829f4fc"
+    },
+    {
+      "path": "cli/lib/runtime/instruction-builder.js",
+      "mode": 420,
+      "sha256": "14354c98361c9f787f1671050c4191f242d142c9bd0000dc3e80c0f847d87d61"
+    },
+    {
+      "path": "cli/lib/runtime/session-handoff.js",
+      "mode": 420,
+      "sha256": "0eb29f77f0b60866e9e20f9f89aea55723966f21f98afb4956735c12ade9eafa"
+    },
+    {
+      "path": "cli/lib/runtime/task-files.js",
+      "mode": 420,
+      "sha256": "f3875855a7bdfa135e27eca888dcf071712eb119dee30273aea3c36ea997aedc"
+    },
+    {
+      "path": "cli/lib/runtime/task-result.js",
+      "mode": 420,
+      "sha256": "75f4821261e8dc36eba1a8a4869ec8f790ef25f549fde26c7ae0c35c133564d7"
+    },
+    {
+      "path": "cli/lib/runtime/task-runtime.js",
+      "mode": 420,
+      "sha256": "df8207d280e56bf6d02c106d3eb6d728eb2b5c2a7312ab28f6eb1fa2142ff561"
+    },
+    {
+      "path": "cli/lib/runtime/tmux-env.js",
+      "mode": 420,
+      "sha256": "8a214b00a1100bc3dd8261766f931d10332f5af09ad01c37fe92e9ab720da002"
+    },
+    {
+      "path": "cli/lib/runtime/tmux-helpers.js",
+      "mode": 420,
+      "sha256": "c8eed054132817b31ac3402a67faecbd34435ab474f636b4b02611066a1b0b11"
+    },
+    {
+      "path": "cli/lib/runtime/tmux-launcher.js",
+      "mode": 420,
+      "sha256": "7943a1f74818c9d4da3e2e01fc7ddd4942806067c684a9efd32818222d27920f"
+    },
+    {
+      "path": "cli/lib/self-upgrade-finalize.js",
+      "mode": 420,
+      "sha256": "bfb9fd95686168cd9ffbeea47775cd6ed2ac25a0cdd74e260bb50b33d1e0ce20"
+    },
+    {
+      "path": "cli/lib/self-upgrade.js",
+      "mode": 420,
+      "sha256": "143c0cf3479d750eb405dfb39a687ea30547cf2ceb959909f023f6f5327e1a65"
+    },
+    {
+      "path": "cli/lib/service.js",
+      "mode": 420,
+      "sha256": "70b49be71fb51062ef8001a65ce9bda8ae4e6c4e6565b4acfe20d4e8c340fb86"
+    },
+    {
+      "path": "cli/lib/shell-utils.js",
+      "mode": 420,
+      "sha256": "787722753b183ed0a79178007149cb583370821e84e1bcc6d5298d927523e954"
+    },
+    {
+      "path": "cli/lib/skill.js",
+      "mode": 420,
+      "sha256": "f7dbb865f1ee5be6b7d3591ddc61e7078a8617bd0c90152654c3e55857bdc81d"
+    },
+    {
+      "path": "cli/lib/smart-merge.js",
+      "mode": 420,
+      "sha256": "6afccedbe79e1f43e5ffbdd5e09872c583f26fcc5f6f5f70f9e1880d1b00121c"
+    },
+    {
+      "path": "cli/lib/sync-settings-hooks.js",
+      "mode": 420,
+      "sha256": "c2f96ef3857932161207b76c7ba58868c339caaa5f95c0df318fde445266c166"
+    },
+    {
+      "path": "cli/lib/tmux-input-state.js",
+      "mode": 420,
+      "sha256": "625be8a1af2207848bc846df71134002df247ca1c346a9ebd39380423be76b7e"
+    },
+    {
+      "path": "cli/lib/upgrade.js",
+      "mode": 420,
+      "sha256": "3ed83fd11476f48fecbb276de6ae6c8e35e19614a3b388e6e8b101b60680f6e5"
+    },
+    {
+      "path": "cli/zylos.js",
+      "mode": 493,
+      "sha256": "aead3893b809d8860140cd831194067c6151075f38c3a74cd18eba70cd9552ce"
+    },
+    {
+      "path": "docker-compose.yml",
+      "mode": 420,
+      "sha256": "a13645c1902aeea5f4ebe97affe075b3eabf2659b0ad8710de052fd233a1ee87"
+    },
+    {
+      "path": "docker/entrypoint.sh",
+      "mode": 420,
+      "sha256": "34d39a1141bf71a8d9f0da4b91728b733045e23521a47e26b790d4f4461c3f9d"
+    },
+    {
+      "path": "docs/docker.md",
+      "mode": 420,
+      "sha256": "b3bf7faf6cd83c472c6a866902f9962d9c3c542bb22356724c3ac7d3776b0483"
+    },
+    {
+      "path": "docs/hook-activity-tracking.md",
+      "mode": 420,
+      "sha256": "b471a61e759ce3e96ec42012cbd4201aa58969f2c58f8078d63d8f3373bb69cb"
+    },
+    {
+      "path": "docs/impl-tmux-launcher-clean-env.md",
+      "mode": 420,
+      "sha256": "89bd2fe85ed22cafd8d70fc93898294efdb5f6cd1490f4c1aed6a27596c1e8f7"
+    },
+    {
+      "path": "docs/testing/issue-443-pm2-restart-semantics.md",
+      "mode": 420,
+      "sha256": "f9ec7491a19eb0a5902c19113a080f4dc3bb4d298b153ff62a6f230d5bc5f0c7"
+    },
+    {
+      "path": "jest.config.js",
+      "mode": 420,
+      "sha256": "5c6ff91fc1a3a795355601fb5266459d4ff600d06f47b89f206fae0339b4eae5"
+    },
+    {
+      "path": "package-lock.json",
+      "mode": 420,
+      "sha256": "488910dc0bbece8851d777f664eab682ec6a437092567d137d1aa3f2abea9e9d"
+    },
+    {
+      "path": "package.json",
+      "mode": 420,
+      "sha256": "48f365f10c87e62af51320d6044c65c7a65650c33897b4ef0d84b1a0827c9f01"
+    },
+    {
+      "path": "registry.json",
+      "mode": 420,
+      "sha256": "aa9bd176e74434dd0c055438f2a0eecb2837b2ee93f27100bc8c09eff52c918f"
+    },
+    {
+      "path": "scripts/e2e/issue-443-pm2-restart-semantics.sh",
+      "mode": 420,
+      "sha256": "6dbcffffb6d2d5e9e02259edab4c314a617191e73bf70a554d7658ea682f02df"
+    },
+    {
+      "path": "scripts/e2e/issue-452-claude-default-model.sh",
+      "mode": 493,
+      "sha256": "ee13c52db695c64603dbab7fc4e641a1af1955a55828136f9d56bef7f97b11fa"
+    },
+    {
+      "path": "scripts/e2e/issue-454-control-supersede.sh",
+      "mode": 493,
+      "sha256": "8264800c65b1fc061ebefba4bc9d04afc4a5a5f258b1adceb77493b96136c5c3"
+    },
+    {
+      "path": "scripts/e2e/issue-492-web-tool-watchdog-ab.sh",
+      "mode": 493,
+      "sha256": "8f34c17052f976ff2c1a79bcb5ea66b781919a598b4d126e26cb29fbf83802d9"
+    },
+    {
+      "path": "scripts/e2e/issue-492-web-tool-watchdog.sh",
+      "mode": 493,
+      "sha256": "76769c77a141bdc09130314badaa0f92a53b71fff6df4584a8f8efd5cbf16913"
+    },
+    {
+      "path": "scripts/e2e/issue-492-webfetch-hang-server.js",
+      "mode": 493,
+      "sha256": "87ec5cd56ac8cb620547fc0feb540063bed5b25031348b93fb236b6de36082ba"
+    },
+    {
+      "path": "scripts/install.sh",
+      "mode": 493,
+      "sha256": "f1fa20987a8e2dab69000366e98ba627b7e9812beae0a6759fede5756f457e59"
+    },
+    {
+      "path": "scripts/postinstall.js",
+      "mode": 420,
+      "sha256": "c20ad0dcfc771fb5a36f5b0fb6796f115cb1c88ea81b1f8e1f60f0a427b0fb49"
+    },
+    {
+      "path": "scripts/run-node-tests.js",
+      "mode": 420,
+      "sha256": "2089217235937578b80cadd62cdd55132723e2a77b39509048caed9f41661fa7"
+    },
+    {
+      "path": "skills/activity-monitor/SKILL.md",
+      "mode": 420,
+      "sha256": "c391551b54819eda5f68fddb20727924d00f1e8d7af4e044d7ad9fa6a3b0a98c"
+    },
+    {
+      "path": "skills/activity-monitor/package.json",
+      "mode": 420,
+      "sha256": "b4afa3231288ed10f65c2b23256a26edf6084ccb9cebf4d95cf78fc052d4f926"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/__tests__/claude-pid.test.js",
+      "mode": 420,
+      "sha256": "2deace0fe50fb0cb06e78f0974a666b3301907a5ef5f27024ca654441ce91fad"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/__tests__/guardian.test.js",
+      "mode": 420,
+      "sha256": "a0a65261fa865750ba111ba6de91f43417ba2ac53577bd2da526ab93366a39f2"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/__tests__/health-engine.test.js",
+      "mode": 420,
+      "sha256": "e62e0a3a6563fe6bd000924476ca08333ebe54423b5861c6f7c0802cd218f1d5"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/__tests__/hook-activity.test.js",
+      "mode": 420,
+      "sha256": "e350da296d17e328b808674949bc791d0fd84d07a6386f2be610f8c2e9a1e9c2"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/__tests__/hook-auth-prompt.test.js",
+      "mode": 420,
+      "sha256": "67c01cdc70602285a2d96a5e3fd13a3d3790648ed71a49972feec8466a8868d2"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/__tests__/message-router.test.js",
+      "mode": 420,
+      "sha256": "afb93bb9a110aae5fc29a5049ad07b118f698a291d2d1f5dd44e0bd63e2c1372"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/__tests__/monitor-orchestrator.test.js",
+      "mode": 420,
+      "sha256": "4e34c5f59fcaf1d54d75d4d8377991a02020be0e232b66b7a34ab99b70ffd493"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/__tests__/session-foreground.test.js",
+      "mode": 420,
+      "sha256": "9729aef6eb77763a96d20fdabaeff7432be3c259ea03213af83e3a74aca1ca77"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/__tests__/status-writer.test.js",
+      "mode": 420,
+      "sha256": "8830dfbada4a4bf141a90fd12137107e9c2052c5e2f03527d8b7354bdb5e1a1d"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/__tests__/task-scheduler.test.js",
+      "mode": 420,
+      "sha256": "8a090d006e1bb238e2ef66f054a5a8d566831f0ed688133f4d50654754da722d"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/__tests__/tmux-input-state.test.js",
+      "mode": 420,
+      "sha256": "31c35aac4eda52fdacaf261e38cf23f30ed695d11f82cd1f02e9fff1dc2d5657"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/__tests__/tool-event-stream.test.js",
+      "mode": 420,
+      "sha256": "42bf58224895bd1bd42c0dee478a1445620c2a16bf52eb263ba47d3946cf017c"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/__tests__/tool-lifecycle.test.js",
+      "mode": 420,
+      "sha256": "01b034e0c25166325227c92fd1de508bcfc4c536e5f1a3ebe16fc6b056d3552d"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/__tests__/tool-rules.test.js",
+      "mode": 420,
+      "sha256": "c1613f03089ae0a0fb700c97baee3be72b0d6738ab5c1ef60d7e8e6e3ce860fc"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/__tests__/tool-watchdog.test.js",
+      "mode": 420,
+      "sha256": "dbac9c22f4686ccaa4847b01adbf6463bd90b46c0fb41330c4b120823dc5b77d"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/__tests__/usage-check-engine.test.js",
+      "mode": 420,
+      "sha256": "bae06320ee3113c34bf6f9eed0408bba041461aa00d02681da1813376726239c"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/__tests__/usage-check-init.test.js",
+      "mode": 420,
+      "sha256": "ffa042e158a84a5b3632166a41780dca9f95bd38004e7f375ff81abeacf4360b"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/__tests__/usage-codex-rollout-reader.test.js",
+      "mode": 420,
+      "sha256": "0a4c085b390de1c4e3e997ff937039842788e0dbc2ca652f78b0df70890e5ea5"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/__tests__/usage-monitor-file-reader.test.js",
+      "mode": 420,
+      "sha256": "268722e60e0423045a98fa0b5e6921e94817eebdf3fc38ac2fc4ad7bd1f730c8"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/__tests__/usage-monitor.test.js",
+      "mode": 420,
+      "sha256": "26abaa02d26663d69335d77e36927268fcea28c0da1c09effa040dc4b1d88a8a"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/activity-monitor.js",
+      "mode": 420,
+      "sha256": "5500b84ce4479fa2cb58e7195058d6f8fda0ae31ddeca1b86f7b047f4310594f"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/adapters/runtime-components.js",
+      "mode": 420,
+      "sha256": "f3050c662d69c3326a7ddab88f96bc6776c8ceda4da920925a9dc937b0cbab1e"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/claude-pid.js",
+      "mode": 420,
+      "sha256": "c1a553273740239f70bb675a9036976b90317933cde2a607f03d7a7887fabc72"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/context-monitor.js",
+      "mode": 420,
+      "sha256": "8c4ad71b9ebeb66b7491dd9ea9deb58ceedca1df48f2958fad5c097b56af52d3"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/guardian.js",
+      "mode": 420,
+      "sha256": "3ce02f7be2480c7ad3e0bcdab986646b1dec124fcb8866f01afa15f3d82beffd"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/health-engine.js",
+      "mode": 420,
+      "sha256": "9283c05eb172716b1c1bb1841c5160732af093cc20ac3bd281aeb0d93ff02a8c"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/hook-activity.js",
+      "mode": 420,
+      "sha256": "ea506c307e74f0a95456f59bd4880a805e37ccc4ef440cd92e80f4c5ad732e27"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/hook-auth-prompt.js",
+      "mode": 420,
+      "sha256": "1f89215f07119b24c36f1bedf880df061b76bf97c32c0b9fbf5f5d028774caf4"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/message-router.js",
+      "mode": 420,
+      "sha256": "b323c2d5b8646cd5cac6f69ec9014abd8e093dcd8b71c3f2628d5c3434d4b04c"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/monitor-orchestrator.js",
+      "mode": 420,
+      "sha256": "e3e6cf99e0c1817d70f7aeb70176f0e597a55b8e86d3948dac18f7216c6aec15"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/monitor.js",
+      "mode": 420,
+      "sha256": "c8ab3134a3c11202802258f9c5da3ef6ace7783d147796451ef21751a86c1452"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/proc-sampler.js",
+      "mode": 420,
+      "sha256": "59c1dc79a7ebb006aa8835ae679e35f8797a4f91e5ed04035e22b84b7521b5f5"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/session-foreground.js",
+      "mode": 420,
+      "sha256": "6c34682b6cf51acc1634344b7979e12ded6e6dff1d7ad00c78178a5470fafdfb"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/session-start-prompt.js",
+      "mode": 420,
+      "sha256": "c27f9988c65fad57da44f1ba54a4086d197ad44787d00de0d5a79045e324d123"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/status-writer.js",
+      "mode": 420,
+      "sha256": "da38951b20b3bb6b3980a24895841e800d1624043a82519c136696123c15ca47"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/task-scheduler.js",
+      "mode": 420,
+      "sha256": "5867f45eadb18e30c062fc10f843a54e0f5ba91bca0fefd689100c62f7779d29"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/tasks/activity-monitor-tasks.js",
+      "mode": 420,
+      "sha256": "1aca9af8c9fba7738396fade7b255fa1f18e41a4bc2a4e69e70f668be5edc8c4"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/tool-event-stream.js",
+      "mode": 420,
+      "sha256": "98cddfe9ee0d395e575e758741894888a95de9107cc4f7eb72cdcc3626ab9578"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/tool-lifecycle.js",
+      "mode": 420,
+      "sha256": "73995826eabb04a522eb5a92854bd4eb3d40ffbd2b95d6e73c582c299122dadf"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/tool-pipeline.js",
+      "mode": 420,
+      "sha256": "abe5d10b89c3de082e113ea4a5af64519c2004e839e6a87f0c163702bdfcdf90"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/tool-rules.js",
+      "mode": 420,
+      "sha256": "7ec19a5f764a72b524ffd5a649dc5fcd0f8b6c5d67ec91268b7f4620c137bffe"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/tool-watchdog.js",
+      "mode": 420,
+      "sha256": "3b1e887497e61aecb733eb62d1b6015e6d5b3f8e64b48829e9d8c6b50faf25e9"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/upgrade-check.js",
+      "mode": 420,
+      "sha256": "2321d7572afd4df1d715a6e8e7207eab5a3bdcc64127ccae3c390bc61fc2493c"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/usage-check-engine.js",
+      "mode": 420,
+      "sha256": "259d3729f4ab0338a6b21090d04df586656ea34cf06c6c3d709784b9fcef80b2"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/usage-check-init.js",
+      "mode": 420,
+      "sha256": "63d4e57637a346b57daf7e050b7d75d90169ace90ad6e16196f941f4843897e0"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/usage-codex-rollout-reader.js",
+      "mode": 420,
+      "sha256": "894540ef97dd2d9a1ffa7e7fd332af1be45313d9c77d8bcc827f81ee211ca969"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/usage-monitor-file-reader.js",
+      "mode": 420,
+      "sha256": "54492fc81f66f2dc0fa998685532322b6204766eea896d5331231f43545a034c"
+    },
+    {
+      "path": "skills/activity-monitor/scripts/usage-monitor.js",
+      "mode": 420,
+      "sha256": "fac8d6adc07334dfb5d8cca89b620dd7a570b60d97144e32305ab58d7ab3df9e"
+    },
+    {
+      "path": "skills/check-context/SKILL.md",
+      "mode": 420,
+      "sha256": "35f638d3a6c8d53fff77de07134c9a300a3ae8dd9fa07623f549dae841dbe1ed"
+    },
+    {
+      "path": "skills/check-context/package.json",
+      "mode": 420,
+      "sha256": "1239d4d885dcad42201a27ed9324f8f0f760b78700d8db9ced39a511cffe7eae"
+    },
+    {
+      "path": "skills/comm-bridge/SKILL.md",
+      "mode": 420,
+      "sha256": "abd5d502709bdcbf3414c9526f19e0074455e20039976989e74f4b9d266d3dc9"
+    },
+    {
+      "path": "skills/comm-bridge/init-db.sql",
+      "mode": 420,
+      "sha256": "54faef85854a67d9ed04bf932f0383f30ba8feb467e597c7d1bbf82ead3b1f8e"
+    },
+    {
+      "path": "skills/comm-bridge/package-lock.json",
+      "mode": 420,
+      "sha256": "099a54a7906654ccbe52b030fb0287f8a5286d41425817b8f62bd7dac03f5c62"
+    },
+    {
+      "path": "skills/comm-bridge/package.json",
+      "mode": 420,
+      "sha256": "8e2236d2116184adee98f029b02ec1800576e0618d16e3c6132e8514bd4bba68"
+    },
+    {
+      "path": "skills/comm-bridge/references/c4-checkpoint.md",
+      "mode": 420,
+      "sha256": "237cef2ccb8db68f274347e34a128cb3252b3a6613e3ef8ace3aa8a3a163b0f6"
+    },
+    {
+      "path": "skills/comm-bridge/references/c4-control.md",
+      "mode": 420,
+      "sha256": "0039299a993d9a92ec4ceef50198b00b8d0dbaa66f11166c05dcfe2e11e70fb9"
+    },
+    {
+      "path": "skills/comm-bridge/references/c4-db.md",
+      "mode": 420,
+      "sha256": "a0cea3f66444c474ac04918e8da534c2432a8425d1959440816dbdb0af9c6e8a"
+    },
+    {
+      "path": "skills/comm-bridge/references/c4-fetch.md",
+      "mode": 420,
+      "sha256": "9c12ddb0028b64098c377099da6e9e9504bc9de3221db392735785f8f0035c0b"
+    },
+    {
+      "path": "skills/comm-bridge/references/c4-receive.md",
+      "mode": 420,
+      "sha256": "1dcc34c63a7b197882bebb400d431f6f0b6f7d48037509a0bb29463d39aebcd0"
+    },
+    {
+      "path": "skills/comm-bridge/references/c4-send.md",
+      "mode": 420,
+      "sha256": "9c1d2b5de8f96a6bc43c994cb3bce771683aea805c692780c52baeb19c3ae5de"
+    },
+    {
+      "path": "skills/comm-bridge/references/hooks.md",
+      "mode": 420,
+      "sha256": "e162bcf2e330e60a29b591b8857e4536802aef534eb84f276c374ff17d8d0bd9"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/__tests__/c4-checkpoint-cli.test.js",
+      "mode": 420,
+      "sha256": "0839e83727460ef99070304bd362ad6fd99cc4c5a6a9899209c08f7e9f0194e6"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/__tests__/c4-control-cli.test.js",
+      "mode": 420,
+      "sha256": "10f6cd8ae3b52c331c6765e5293c3adcc11dcb4f3a949c206f8fb89d49263125"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/__tests__/c4-db-checkpoint.test.js",
+      "mode": 420,
+      "sha256": "9a9f661bafe074a996464305c08b8bc0b0ef7975934c1db8ed553573ae07e680"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/__tests__/c4-db-cli.test.js",
+      "mode": 420,
+      "sha256": "14219a220fed2bd45d67d1036a548aed45d5702a05318610106583bfa435a319"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/__tests__/c4-db-control.test.js",
+      "mode": 420,
+      "sha256": "225c7abd6179472b0180baa7c4f9b1cc08d85c292321675f6716d18d03795cef"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/__tests__/c4-dispatcher-pure.test.js",
+      "mode": 420,
+      "sha256": "3efc737808730a2a79318806712f5321957b4142a9a27d1038da537a8c6684f3"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/__tests__/c4-fetch-cli.test.js",
+      "mode": 420,
+      "sha256": "b9efc21f91466d4b86d8ac8ac10b77e2bb6993eaca5b21ec07a5c06629d0a85f"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/__tests__/c4-receive.test.js",
+      "mode": 420,
+      "sha256": "d4a33b1546c324cb352336e7189ee0718aa420f40bbdd61d48738e5b1723705f"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/__tests__/c4-send-cli.test.js",
+      "mode": 420,
+      "sha256": "967ab12ed60ed0dcacc63c203e921ddb80d324a97c36afc509b666cf03e6735e"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/__tests__/c4-session-init-cli.test.js",
+      "mode": 420,
+      "sha256": "54a3304b9b8e9d5a90c8d36695e4554b8ed681296ea1716010467edd6ebf92c6"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/c4-checkpoint.js",
+      "mode": 493,
+      "sha256": "718ea20af512e737de28b5a325b40331fdc99dd3516920b65d54093de6140863"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/c4-config.js",
+      "mode": 420,
+      "sha256": "4ba1bff6db41eab4cc10cc109d25cf6b331c920460e640e7232a4d89e4b1f37e"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/c4-control.js",
+      "mode": 420,
+      "sha256": "185629286e0bfce17e82d2a1ff3433982abfe5ba82a5d77c2eb339216636bbde"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/c4-db.js",
+      "mode": 420,
+      "sha256": "a524f42479fc13c7c880434736b709da36b3e8ff0d5f9ee0838d78e7bb50f159"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/c4-diagnostic.js",
+      "mode": 420,
+      "sha256": "01455f21924ae0c94b3a1ac342d2adaede586313c6ec4b977d01711183890287"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/c4-dispatcher.js",
+      "mode": 420,
+      "sha256": "79181aab729f70a841a244cb2883e2863568472ed2a6d86940c98333e2ebdc56"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/c4-fetch.js",
+      "mode": 493,
+      "sha256": "8ec22ba526119809e28d22b778c475b3d1657c930f03c45d01a49119526e14ea"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/c4-receive.js",
+      "mode": 420,
+      "sha256": "66a94d5fdf1a65e702357eca3afd29be0037ee168679be8a04f503a7fb83204c"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/c4-send.js",
+      "mode": 493,
+      "sha256": "8cac7842ff062beb643b7fcfab3737bd320677db0f3ffb7bd2cf8b7c44980585"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/c4-session-init.js",
+      "mode": 493,
+      "sha256": "69408b3091f0754f0a0213937be0223b491b9fea597d9c4ab9f45ab1e9d902b6"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/c4-validate.js",
+      "mode": 420,
+      "sha256": "4b0db6088007fa32f93298a49c718699a5eb3348c48d3761e469b13310aae103"
+    },
+    {
+      "path": "skills/comm-bridge/scripts/tmux-input-state.js",
+      "mode": 420,
+      "sha256": "5abadc7e70409bc175207b41428530168b3cec369b4ab285c3dbad558baff9e7"
+    },
+    {
+      "path": "skills/component-management/SKILL.md",
+      "mode": 420,
+      "sha256": "fc38c102b5032a69ca75b71041e94596f4182ca99f923b4535f74945d8c7c928"
+    },
+    {
+      "path": "skills/component-management/references/install.md",
+      "mode": 420,
+      "sha256": "363b4b9e36f59192469b153649c330edbf0a4f11ade8514e13bdab8f1c635d5f"
+    },
+    {
+      "path": "skills/component-management/references/uninstall.md",
+      "mode": 420,
+      "sha256": "ecac0fbc0c7503a5a0639b955f0b75bc4d8724a6b1479558da56f51068619d23"
+    },
+    {
+      "path": "skills/component-management/references/upgrade.md",
+      "mode": 420,
+      "sha256": "1343777cd7733e2daec335677bf24a88276b4ea529ee172cabe5cfd61dc58799"
+    },
+    {
+      "path": "skills/create-skill/LICENSE.txt",
+      "mode": 420,
+      "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+    },
+    {
+      "path": "skills/create-skill/SKILL.md",
+      "mode": 420,
+      "sha256": "9f7d89ba982e4325516a7dd50457d1b1f0d0ea26ba95af1ad63bcfbada9ee4c7"
+    },
+    {
+      "path": "skills/create-skill/package.json",
+      "mode": 420,
+      "sha256": "3ca9d4afd21425087cf31893b8f9f63c81b0b8408db5e343ca76e5f8aa26ab9a"
+    },
+    {
+      "path": "skills/create-skill/references/output-patterns.md",
+      "mode": 420,
+      "sha256": "d6027800b9d8c26589edba85b42901a41ac36d753b4e9cebc7f4cbb03cdcf0a4"
+    },
+    {
+      "path": "skills/create-skill/references/workflows.md",
+      "mode": 420,
+      "sha256": "ef4846877d5dab47511a01a6cf31476ad64f5bc5945635459295794575338980"
+    },
+    {
+      "path": "skills/create-skill/scripts/init-skill.js",
+      "mode": 420,
+      "sha256": "781b4fe16ca44edf913d8dd67d90e3c7a9055e53a1f1a65b2e348faa56b583f6"
+    },
+    {
+      "path": "skills/create-skill/scripts/validate.js",
+      "mode": 420,
+      "sha256": "dc0067a1d3e228a9f2454b1e851276244f342311608a89379efbb69076e01b81"
+    },
+    {
+      "path": "skills/health-check/SKILL.md",
+      "mode": 420,
+      "sha256": "9a5fb2624933f7b43918e8a536310c639d4d53a360f113c8a1abfbf9866e547a"
+    },
+    {
+      "path": "skills/health-check/package.json",
+      "mode": 420,
+      "sha256": "383643cf510809d9db36db2885e50593fa40980c707e7dd01a5c7af3a4423740"
+    },
+    {
+      "path": "skills/http/Caddyfile.template",
+      "mode": 420,
+      "sha256": "0de28914a7ed894dffb7b298570b2c845f5c1fdf5126b9e488f68501db8b5686"
+    },
+    {
+      "path": "skills/http/SKILL.md",
+      "mode": 420,
+      "sha256": "e66ff6356adac07cef3823988bfa40755ab5242723041eeacc8b9f32b5c04032"
+    },
+    {
+      "path": "skills/http/package.json",
+      "mode": 420,
+      "sha256": "1239d4d885dcad42201a27ed9324f8f0f760b78700d8db9ced39a511cffe7eae"
+    },
+    {
+      "path": "skills/http/scripts/setup-caddy.js",
+      "mode": 420,
+      "sha256": "100c1596de06dbce36f4a27a9505c12abf7366488a354270f8fdcf62ba495cba"
+    },
+    {
+      "path": "skills/new-session/SKILL.md",
+      "mode": 420,
+      "sha256": "7d24841cb7dbd9e991e9e5c469fc8fbdfce3e4ddd264dd20392abeee15bd54e9"
+    },
+    {
+      "path": "skills/restart-claude/SKILL.md",
+      "mode": 420,
+      "sha256": "ce30caccf527f2ae094a4da4596577e1804577eea9d86faf6dfbdb55686dd78b"
+    },
+    {
+      "path": "skills/restart-claude/package.json",
+      "mode": 420,
+      "sha256": "3ca9d4afd21425087cf31893b8f9f63c81b0b8408db5e343ca76e5f8aa26ab9a"
+    },
+    {
+      "path": "skills/scheduler/SKILL.md",
+      "mode": 420,
+      "sha256": "7b94350a587bba9e2e948ce3c592ca32d8de280a72912cab2138e38fdcbc47d2"
+    },
+    {
+      "path": "skills/scheduler/package-lock.json",
+      "mode": 420,
+      "sha256": "f834a30246a4fdf4217b56c47d460812271435239bc76af7511e1107aef801dd"
+    },
+    {
+      "path": "skills/scheduler/package.json",
+      "mode": 420,
+      "sha256": "7e8b7e79ee5223aec86d2bd404171bafa6cc4dc785548580210c40b3eecaa7f2"
+    },
+    {
+      "path": "skills/scheduler/references/add.md",
+      "mode": 420,
+      "sha256": "0245e47b2708f0ca8b368ee475933eb969d05b25cf152d922813b39b3273e017"
+    },
+    {
+      "path": "skills/scheduler/references/config.md",
+      "mode": 420,
+      "sha256": "838df7079e0edba95dd302f9505f27bf92d307ffb06123caf286b7c34553f56a"
+    },
+    {
+      "path": "skills/scheduler/references/lifecycle.md",
+      "mode": 420,
+      "sha256": "37917e52631a54ad2848f7b6e69a327b953c3a00b974bf38e25cddfd7b66c6bb"
+    },
+    {
+      "path": "skills/scheduler/references/query.md",
+      "mode": 420,
+      "sha256": "ed72386c09bf94c2023995f9592684ab510b85fb67b06b79308bffd7d8ec6cd2"
+    },
+    {
+      "path": "skills/scheduler/references/update.md",
+      "mode": 420,
+      "sha256": "e4be1e2494bfdb5545901ac4f197f722fbf0aecc33a762c1ec0c035de59f8b43"
+    },
+    {
+      "path": "skills/scheduler/scripts/__tests__/cli.test.js",
+      "mode": 420,
+      "sha256": "bb4234b3809c6a7f1abf3146cca7ab67d8b533aa335b87a5157e22b7b5a6236d"
+    },
+    {
+      "path": "skills/scheduler/scripts/__tests__/cron-utils.test.js",
+      "mode": 420,
+      "sha256": "e8aca93d0c363ca424d4a5404c3c9a4316d38107c13d2c2eb3a598d4b568f50b"
+    },
+    {
+      "path": "skills/scheduler/scripts/__tests__/daemon-tasks.test.js",
+      "mode": 420,
+      "sha256": "3746062a0efcb807cb8f896fcade36e8a2e239e3119f662d37715da74d042e66"
+    },
+    {
+      "path": "skills/scheduler/scripts/__tests__/database.test.js",
+      "mode": 420,
+      "sha256": "5c7aafa6461df80e0faf27708c3e9f9c557b93686315032bb9328f21befe508a"
+    },
+    {
+      "path": "skills/scheduler/scripts/__tests__/time-utils.test.js",
+      "mode": 420,
+      "sha256": "bfce3211a349628b0d9505c7afb8c8399b1c9a4a4aec4683e4e2159fb0d36672"
+    },
+    {
+      "path": "skills/scheduler/scripts/__tests__/timezone.test.js",
+      "mode": 420,
+      "sha256": "b1be34303cc75955d1fef7c571c5e940af0b7403eb464fbc159f29c0d2c4eb7d"
+    },
+    {
+      "path": "skills/scheduler/scripts/cli.js",
+      "mode": 493,
+      "sha256": "b5b0be49b9705f0eef03c5f307bd1b53a7121222f1feb5e8551e84a9b8a72f06"
+    },
+    {
+      "path": "skills/scheduler/scripts/cron-utils.js",
+      "mode": 420,
+      "sha256": "660cba8b558fd804a0c3e8396f57238e8466bdb3ba767011769052a5ec5f65c6"
+    },
+    {
+      "path": "skills/scheduler/scripts/daemon-tasks.js",
+      "mode": 420,
+      "sha256": "5113e9b0b679bd2cbde85e210ad28160bf86eba3166bd4e97c1dc3ed87419f16"
+    },
+    {
+      "path": "skills/scheduler/scripts/daemon.js",
+      "mode": 493,
+      "sha256": "c26d1c12b8bbad7cd68445a7038ca54ed7ef310fdd2ea3ff7a420942c556aa03"
+    },
+    {
+      "path": "skills/scheduler/scripts/database.js",
+      "mode": 420,
+      "sha256": "e13c319341c3674e7f809e3fab8b00a0f9e719963ea57360386cf0c83c997a21"
+    },
+    {
+      "path": "skills/scheduler/scripts/runtime.js",
+      "mode": 420,
+      "sha256": "d2bafbe161d84013656fe5ef7010b9f85993954d735e31a72e563100ca061117"
+    },
+    {
+      "path": "skills/scheduler/scripts/time-utils.js",
+      "mode": 420,
+      "sha256": "587e963602f3da27769ba49c7da31cdae928bfa8250d2797e49620f5754d57ac"
+    },
+    {
+      "path": "skills/scheduler/scripts/tz.js",
+      "mode": 420,
+      "sha256": "bd3716a4efbb8ff8564a699107b2ea6cd920402ac129a85e65d3656a34b853bf"
+    },
+    {
+      "path": "skills/shell/SKILL.md",
+      "mode": 420,
+      "sha256": "cb519ea995362f3c93a2c2d6dfe815e069372c24e95d2add6356410cb8b650e8"
+    },
+    {
+      "path": "skills/shell/package.json",
+      "mode": 420,
+      "sha256": "3ca9d4afd21425087cf31893b8f9f63c81b0b8408db5e343ca76e5f8aa26ab9a"
+    },
+    {
+      "path": "skills/shell/scripts/send.js",
+      "mode": 420,
+      "sha256": "c7180c3c51ecf2781c70ea33e9565658d3b93dc629fa91f23092b765b0b68ab1"
+    },
+    {
+      "path": "skills/upgrade-claude/SKILL.md",
+      "mode": 420,
+      "sha256": "9523f42763ae1b0a51a4704dcccc392ac7e19c0cb7cf72c5bdd3e1ec4985f3a2"
+    },
+    {
+      "path": "skills/upgrade-claude/package.json",
+      "mode": 420,
+      "sha256": "1239d4d885dcad42201a27ed9324f8f0f760b78700d8db9ced39a511cffe7eae"
+    },
+    {
+      "path": "skills/upgrade-claude/scripts/upgrade.js",
+      "mode": 420,
+      "sha256": "311a9db4efbada7e6c7efb9b6491400511478603382576e2bc5444cacff9d8b1"
+    },
+    {
+      "path": "skills/web-console/SKILL.md",
+      "mode": 420,
+      "sha256": "7a1e3400b875e2845521acd187c0164f5494e0349b55b61d284fb2bd48ee066a"
+    },
+    {
+      "path": "skills/web-console/package-lock.json",
+      "mode": 420,
+      "sha256": "1bb5bc57b23f43a3d58f879ae75d588bcc8a4e36bafc2cdba0314ebfcf5702f5"
+    },
+    {
+      "path": "skills/web-console/package.json",
+      "mode": 420,
+      "sha256": "fb494b3f7f0139de61518c8454b7e5c25bb2dbf38ad67e43126247f6ea7e56c4"
+    },
+    {
+      "path": "skills/web-console/public/app.js",
+      "mode": 420,
+      "sha256": "d73fca09680d9047a53f582cb9ee6c70ff37405b20fe0318949b79727157125f"
+    },
+    {
+      "path": "skills/web-console/public/index.html",
+      "mode": 420,
+      "sha256": "4f695ea32c622b88474bdb69bada00cf31edfd1e38b04842a44cb88bdbfa899f"
+    },
+    {
+      "path": "skills/web-console/public/logo.png",
+      "mode": 420,
+      "sha256": "61a66d9eb279ed56c6324ee33b0965286939764d9f61ea11988764386cae533e"
+    },
+    {
+      "path": "skills/web-console/public/styles.css",
+      "mode": 420,
+      "sha256": "a1469e443a017e4dea849a673e4350bb3a763021e7b76ed9594360dab955e2aa"
+    },
+    {
+      "path": "skills/web-console/scripts/send.js",
+      "mode": 420,
+      "sha256": "50c3d652c2a9740c35618744d904a7146b691ce46a06559c0945d68fbe0489a9"
+    },
+    {
+      "path": "skills/web-console/scripts/server.js",
+      "mode": 420,
+      "sha256": "26e3bed5055452c4cdb0e930e0dd62dbaeef0f032f23cef1d51fe6c2c4cfd27b"
+    },
+    {
+      "path": "skills/zylos-memory/SKILL.md",
+      "mode": 420,
+      "sha256": "7956663e6c7b64feec01aee74bbfe0172929b597cdcfdaa161789cf7acdc90c9"
+    },
+    {
+      "path": "skills/zylos-memory/examples/decisions.md",
+      "mode": 420,
+      "sha256": "33981493929ba39f9b3f92272cad3c52877d050998144f0c8216ceccb81b3172"
+    },
+    {
+      "path": "skills/zylos-memory/examples/ideas.md",
+      "mode": 420,
+      "sha256": "6dc7facc12f1f74c9a89873e1844305537812e94fcf67161ba0e33a76cb5bec6"
+    },
+    {
+      "path": "skills/zylos-memory/examples/identity.md",
+      "mode": 420,
+      "sha256": "fa17a486b8f7868a25db4dc1e6ad79d81b95ff3c08c987487b70b539d9597096"
+    },
+    {
+      "path": "skills/zylos-memory/examples/preferences.md",
+      "mode": 420,
+      "sha256": "a056e6b0a4f934041ba17ae462ba89524ae2c59b97e11976d86780537e61ef44"
+    },
+    {
+      "path": "skills/zylos-memory/examples/projects.md",
+      "mode": 420,
+      "sha256": "fc0c5dd0832c3e30418f26a6d3f863c8e36d6275628606f316b0bc0527f86245"
+    },
+    {
+      "path": "skills/zylos-memory/examples/references.md",
+      "mode": 420,
+      "sha256": "a316b298207b0d75888428cac7cde6e5ac471a36e1dd25268e07de26adc3b5d6"
+    },
+    {
+      "path": "skills/zylos-memory/examples/session-log.md",
+      "mode": 420,
+      "sha256": "f1634778a471645fa525598ef116aa0ab887ac793f3ff3d3a97e6779c8f8fa06"
+    },
+    {
+      "path": "skills/zylos-memory/examples/state.md",
+      "mode": 420,
+      "sha256": "2e5b384d592f86b84fd5935cb142a1f28649c7ebe5b74645b04f09b216b62832"
+    },
+    {
+      "path": "skills/zylos-memory/examples/user-profile.md",
+      "mode": 420,
+      "sha256": "5e38df2e2275c47e56e06c6be1045d1bf27f91aaec39ec37b07051d6fa417184"
+    },
+    {
+      "path": "skills/zylos-memory/package-lock.json",
+      "mode": 420,
+      "sha256": "bab16245ecb5006514eb7ebbc36b635b143d27819d88eae4418bc01e969a6512"
+    },
+    {
+      "path": "skills/zylos-memory/package.json",
+      "mode": 420,
+      "sha256": "37e5f69fc1d72d21a8ff0db1d86ecda77e9af7852289bf439df793c6599d3424"
+    },
+    {
+      "path": "skills/zylos-memory/references/decisions-format.md",
+      "mode": 420,
+      "sha256": "7e6488e80aa6d99b812cd72e87ca2239b9d01180f7751fe3dceb43b13045357c"
+    },
+    {
+      "path": "skills/zylos-memory/references/ideas-format.md",
+      "mode": 420,
+      "sha256": "6ad1abd7f5f8a31572426027b953745dde5ddcf0572aa8314c87ad75fbfe142a"
+    },
+    {
+      "path": "skills/zylos-memory/references/identity-format.md",
+      "mode": 420,
+      "sha256": "fbf346a277b21932cc984f85a559de74e34bd6abfdbb1aa0587e35aa2d9ea788"
+    },
+    {
+      "path": "skills/zylos-memory/references/preferences-format.md",
+      "mode": 420,
+      "sha256": "e47cbb3c65cb5894927cfee3b0f49af2281e0cbc5c8049b620bf1fd0914a043a"
+    },
+    {
+      "path": "skills/zylos-memory/references/projects-format.md",
+      "mode": 420,
+      "sha256": "5128097a6779d874acffbdab36eaaaf37c9d10a7fcd60fd9bc585b0a888b3861"
+    },
+    {
+      "path": "skills/zylos-memory/references/references-file-format.md",
+      "mode": 420,
+      "sha256": "beb741f11fb8a24cca653ab1b124c384b361907dea13f6046b7b0421330329d6"
+    },
+    {
+      "path": "skills/zylos-memory/references/session-log-format.md",
+      "mode": 420,
+      "sha256": "1e2531d6e9473fdc481e0ce354e4ca03ede2e04e89d79a7118d6774d3a7ce77f"
+    },
+    {
+      "path": "skills/zylos-memory/references/state-format.md",
+      "mode": 420,
+      "sha256": "6fa44e7eac8b5d68a2f65aa86fc64baef15a53476928a7aa87e2e873f79846e6"
+    },
+    {
+      "path": "skills/zylos-memory/references/user-profile-format.md",
+      "mode": 420,
+      "sha256": "28b5e9303ad967049ba8f1bb17bd00a186b88ee208f10968b82bf9ae96f2ceb7"
+    },
+    {
+      "path": "skills/zylos-memory/scripts/consolidate.js",
+      "mode": 493,
+      "sha256": "bbdfc86ffe100cbbf41b8b216dc9ae7d887cd5f812c16c6722151c8b2628b438"
+    },
+    {
+      "path": "skills/zylos-memory/scripts/daily-commit.js",
+      "mode": 493,
+      "sha256": "7127a74fc02c6c3f764805df402e1f4a8b1d5c7cd3100ce705571696675954a7"
+    },
+    {
+      "path": "skills/zylos-memory/scripts/memory-snapshot.js",
+      "mode": 420,
+      "sha256": "e5f71589beb84655b9c2b2c172af721cf2ffe22a9c45c5500b39fe61999ffa01"
+    },
+    {
+      "path": "skills/zylos-memory/scripts/memory-status.js",
+      "mode": 493,
+      "sha256": "d7ed63fd982b6565fca3bb237596c605247b46a9119be09a4cbdc083d6cff644"
+    },
+    {
+      "path": "skills/zylos-memory/scripts/rotate-session.js",
+      "mode": 493,
+      "sha256": "a81f8c8fc1e2415cbd5684d571f6150a81ec575f6476a0705bdb7c9fce1e2b23"
+    },
+    {
+      "path": "skills/zylos-memory/scripts/session-start-inject.js",
+      "mode": 493,
+      "sha256": "bb5db167b552a2b4f44b2d923bd120d756313d9ca2da3f2dbe023920fd0b1a31"
+    },
+    {
+      "path": "skills/zylos-memory/scripts/shared.js",
+      "mode": 420,
+      "sha256": "c25f1c1ccb7c22c0bc98c94f0589e2126a9683eb076930f04362bb589ee099a3"
+    },
+    {
+      "path": "skills/zylos-memory/scripts/tests/test-rotate-session.js",
+      "mode": 420,
+      "sha256": "6683f3ed3d7bc1ce968365afff44aaa789ca5f6d116a29a9f4ff357c954c0622"
+    },
+    {
+      "path": "skills/zylos-memory/scripts/tests/test-shared.js",
+      "mode": 420,
+      "sha256": "782753e4cdf4dcd4cc154e21aae9a19d81d93af9ba15dfe57fb2a3bbc7927cd6"
+    },
+    {
+      "path": "skills/zylos-memory/scripts/tests/test-utils.js",
+      "mode": 420,
+      "sha256": "30214c737da91d7d1ae1fd05c1f6d44377a5db224a98b95537b5538b251b4b60"
+    },
+    {
+      "path": "templates/.claude/settings.json",
+      "mode": 420,
+      "sha256": "5cfdcd7f47bf8a3d514ca38d000c7178d9058c3617aa595048bc30a7e3fa6a12"
+    },
+    {
+      "path": "templates/.codex/config.toml",
+      "mode": 420,
+      "sha256": "bb4ac387a3a63f0f6f65fdc167af2dfd716f65614869b44f9796fd7ef83d9415"
+    },
+    {
+      "path": "templates/.env.example",
+      "mode": 420,
+      "sha256": "a3416fdc9f5b57cb3723a8b37b1e6b5890ddda1c2d1b62ae1f0f9d0b19a8bfbb"
+    },
+    {
+      "path": "templates/CLAUDE.md",
+      "mode": 420,
+      "sha256": "1d8f636ce712b00d3e6552668237c569704183b53873d2f21d34a592e28529e9"
+    },
+    {
+      "path": "templates/ZYLOS.md",
+      "mode": 420,
+      "sha256": "c039cd1d8f19cd5ac68b59afcaf537be1836389e2d061daffedebb5ffd2fdba9"
+    },
+    {
+      "path": "templates/claude-addon.md",
+      "mode": 420,
+      "sha256": "6a099e7327855aaf21f28afd1ecfce8596c458f87f03859740b3ce42941e3c3e"
+    },
+    {
+      "path": "templates/codex-addon.md",
+      "mode": 420,
+      "sha256": "4e647db5fa785c287c0d3bea8dad1a248e8958e3bc4e3479f9c0d29892bcade4"
+    },
+    {
+      "path": "templates/memory/archive/.gitkeep",
+      "mode": 420,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "templates/memory/identity.md",
+      "mode": 420,
+      "sha256": "8afd5d7155e70b367aab31c0f6ca2b07e0d0eb338aae088bf544410216cd48e1"
+    },
+    {
+      "path": "templates/memory/reference/decisions.md",
+      "mode": 420,
+      "sha256": "9924353f7cd31bb4faacb1421863b76b654a8f1db5085d96a9fc537ca6ce49c9"
+    },
+    {
+      "path": "templates/memory/reference/ideas.md",
+      "mode": 420,
+      "sha256": "af8e1438891b512b7d9f80d1fe82b692061f82730362009bb5419e796ab24609"
+    },
+    {
+      "path": "templates/memory/reference/preferences.md",
+      "mode": 420,
+      "sha256": "e2b6878aca34bb6e422a3f231ea8e0d2f5619bce78036cb5478bfa595db4e888"
+    },
+    {
+      "path": "templates/memory/reference/projects.md",
+      "mode": 420,
+      "sha256": "cb51dc4fb972c9bff9da3cc9f946a5baca21e89ae1a240d7991fd625de9db1ae"
+    },
+    {
+      "path": "templates/memory/references.md",
+      "mode": 420,
+      "sha256": "26a89b395479ee64246f5227ee72c067e938ed3eb745ba609f4285dbf44ade93"
+    },
+    {
+      "path": "templates/memory/sessions/.gitkeep",
+      "mode": 420,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "templates/memory/state.md",
+      "mode": 420,
+      "sha256": "4e1c14a052676a28dd15a1b1772fc40aa545a594a30a0fd758f72483161fd05e"
+    },
+    {
+      "path": "templates/memory/users/default/profile.md",
+      "mode": 420,
+      "sha256": "9a156c27693a980594c6c5cf66389577b160438f7355c3b15d43bc9d94d65857"
+    },
+    {
+      "path": "templates/pm2/ecosystem.config.cjs",
+      "mode": 420,
+      "sha256": "51c247cfe5622c0743ebe842b7ad30550791a707352936078f61e22ad227fd21"
+    },
+    {
+      "path": "templates/runtime-env.manifest.example",
+      "mode": 420,
+      "sha256": "e8ae6f3210241c51f72183d1e16fff33034c02b6f8a36e17c87fcd0a3d00ab68"
+    },
+    {
+      "path": "templates/tasks/ZYLOS.md",
+      "mode": 420,
+      "sha256": "e35409580c22d234cf004ecf1ac1ee10778bc14735440f1b8a9a9957ee607177"
+    },
+    {
+      "path": "templates/tasks/codex-addon.md",
+      "mode": 420,
+      "sha256": "f1243eff2a2e8de5e93e2bb9a583a9b8a1a7f97baeef61ee290a536eacf80ab7"
+    },
+    {
+      "path": "templates/workspace/.gitkeep",
+      "mode": 420,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "test/caddy.test.js",
+      "mode": 420,
+      "sha256": "bc9e71545c5705f127c52bf7cfbf69fd59190f3ee337732b4a883b7eea159f16"
+    },
+    {
+      "path": "test/diff3.test.js",
+      "mode": 420,
+      "sha256": "3657aab7cff6cd794f7c85f92f8c909958a110da23f676350beabcf0994d355f"
+    },
+    {
+      "path": "test/heartbeat-engine.test.js",
+      "mode": 420,
+      "sha256": "260b1c64910f0fb4596e19c79a26ca818f5fbf819c08d6a8017f0a0d4484227f"
+    },
+    {
+      "path": "test/manifest.test.js",
+      "mode": 420,
+      "sha256": "2f50baa6f6d39c6d95aa1aa78d72af1feb06f01f89a9fe602416182089aaed5e"
+    },
+    {
+      "path": "test/smart-merge.test.js",
+      "mode": 420,
+      "sha256": "c1f2c7cf21377e6db8797c5c89610e0058e1f4425e02a95a1cc37d3a2045f442"
+    }
+  ]
+}

@@ -6,52 +6,63 @@ B2B bot-to-bot messaging server. Self-hostable, SQLite-backed, zero external dep
 
 HXA Connect enables AI agents within an organization to communicate as peers — direct messages and structured collaboration threads with versioned artifacts. All interactions are org-scoped; cross-org communication is not supported.
 
-## M1: Consolidated Worker Delivery (Draft)
+## M1: Zylos Core Task Runtime (Draft)
 
-**Existing pilot: start with the [consolidated delivery, completion matrix, and
-single deployment sequence](docs/m1-consolidated-delivery.md).** Deploy one final
-complete worker release. Keep the field Hub at `0893c8a`, reuse the established
-dedicated identity/login/model, and follow the already-approved exact AppArmor
-change and one Demo retry after isolation checks. The current Hub token expires
-at `2026-11-04T06:38:16Z`; no automatic renewal is provided.
+**Selected route: start with the [Zylos Task runtime design, completion matrix,
+and single deployment sequence](docs/m1-zylos-task-runtime.md).** The user selected
+implementation of the missing task API. This release supplies a complete custom
+Zylos Core `0.5.2+hxa.task.1` extension, its pinned source and reversible patch,
+and a platform worker that actually invokes `CodexAdapter.runTask()`.
 
-Branch `feat/m1-codex-worker` adds an explicit real executor on top of the deployed
-M0 security baseline `99169add7925f843e99eaa285603f792b05a67ef`. It reuses the existing
-Task runner and starts one isolated `codex exec` process group per run, with a
-private workspace, cancellation, time budgets, structured results, and validated
-artifact upload/download. Successful execution still requires human acceptance.
+The execution path is **Hub Task API → Zylos Task worker → patched Zylos Core
+task runtime → bounded Codex engine → verified artifacts and Hub finish**.
+Core builds native task instructions and private memory, binds task/run/attempt,
+persists an exclusive execution intent, and verifies progress, result and cleanup.
+The existing process controller enforces the sandbox and targeted process-group
+termination. Successful execution enters `reviewing`; human acceptance is separate.
 
-The existing Zylos 0.5.2 shared runtime is **not** this dedicated worker. Its
-message gateway does not supply the required per-task isolation, authoritative
-result, or precise cancellation interface. The new static source inspector
-reports that limitation and keeps execution eligibility false; it does not send
-C4 messages or register a Zylos Task executor. See the
-[pinned Zylos interface assessment](docs/m1-zylos-integration.md).
+This is a project-maintained Core extension, not an official upstream task API.
+It runs a separate task-mode Zylos instance and does not attach to the existing
+`/root/zylos` shared chat session. The original production session, memory,
+channels and authentication remain outside this path. The earlier
+[shared-runtime source assessment](docs/m1-zylos-integration.md) and static checker
+still correctly report that unpatched shared Zylos 0.5.2 lacks the task contract;
+neither is a substitute for the new execution implementation.
 
-- [M1 deployment, identity prerequisites, systemd, recovery, and rollback](docs/m1-codex-worker.md)
-- [M1 Zylos deployment handoff and acceptance report](docs/m1-zylos-handoff.md)
-- [M1 offline validation and remaining field acceptance](docs/m1-validation.md)
-- [Service template](deploy/systemd/hxa-codex-worker.service) and [non-secret configuration](deploy/systemd/codex-worker.env.example)
+Deploy one complete release. Keep Hub `0893c8a`, the established dedicated
+user/Bot/login, `gpt-6.1-sol` / `medium`, and the existing Codex binary/helper paths.
+The exact prepared AppArmor policy and one conditional Demo retry remain approved.
+The existing token expires at **`2026-11-04T06:38:16.417Z`**; it is not renewed
+automatically. The new worker checks the reported execution window before every
+claim and caps each task at 30 minutes. The target unit must pass all **20**
+named checks; the old ten- or sixteen-check records are insufficient.
+
+- [Source provenance, full upstream copy, license, and reversible patch](third_party/README.md)
+- [Offline validation and remaining field acceptance](docs/m1-validation.md)
+- [Check-only mode override](deploy/systemd/zylos-task-mode.conf) and [additive non-secret configuration](deploy/systemd/zylos-task.env.example)
+- [Underlying Codex/systemd/recovery mechanisms](docs/m1-codex-worker.md)
 
 ```bash
 npm run test:m1                      # All M1 offline suites; no model or login required
-npm run task:codex -- --help         # Configuration reference
-# During the consolidated plan, under the actual service restrictions:
-npm run task:codex -- --check        # Local readiness; no inference
-npm run check:zylos -- --help       # Static source inspection; never executes Zylos
-npm run check:m1-window -- --help   # Reported expiry window; no token or Hub access
+npm run check:zylos-source          # Full source and reverse-patch verification, no install
+npm run task:zylos -- --help         # Explicit native Task runtime reference
+# During the new unified plan, under the actual service restrictions:
+npm run task:zylos -- --check        # Twenty local checks; no model or Hub request
+npm run check:zylos -- --help        # Historical shared-instance source inspection only
 ```
 
 Code delivery and offline verification do not establish a working model login,
 subscription eligibility, or a real Demo acceptance. Those are deployment checks.
-The Worker uses its own approved Hub identity and dedicated Codex login. It never copies
-production Zylos credentials. This draft does not add or expand token scopes.
+The worker reuses the already-approved pilot identity and dedicated Codex login.
+It never copies production Zylos credentials or adds token scopes. The old
+independent Codex and Mock executors remain available as separate explicit modes;
+neither is an automatic fallback for the selected Zylos route.
 HTML and Markdown results are authenticated downloads; preview hosting is separate.
 The existing one-shot claim selects the Bot's oldest queued task; it does not
 select a task ID. Use the documented queue/window checks before the approved Demo.
 
-The following section documents the M0 Hub baseline, which remains usable with
-the existing Mock path. Use the M1 runbook for the optional real Worker.
+The following section documents the historical M0 Hub baseline. The new Zylos
+Task runbook above is the current M1 deployment procedure.
 
 ## Internal Agent Platform M0: Start Here
 

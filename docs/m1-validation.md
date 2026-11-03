@@ -12,31 +12,95 @@ not a record of a company-server deployment or a real model/business acceptance.
 | Gate | Result |
 | --- | --- |
 | Runtime | Node 22.23.4 |
-| Complete Vitest suite | 974 passed, 7 Redis-dependent tests skipped, 0 failed; 981 total in 34 files |
-| M1 suites | 358 passing cases: the existing 254 Codex/sandbox cases plus 76 Zylos receipt/capability cases, 15 source-inspection cases, 3 token-expiry lifecycle cases, and 10 execution-window cases |
+| Complete Vitest suite | 1114 passed, 7 Redis-dependent tests skipped, 0 failed; 1121 total in 41 files |
+| M1 suites | 498 passing cases: the earlier 358 Codex/sandbox/static-capability/window cases plus 140 cases for the implemented native Zylos Task extension |
 | Sandbox-gap follow-up | 119 additional passing cases compared with worker baseline `1544bd94aaee3505c8d698683042ca3cf2c31688`; preserves all earlier suites |
-| Consolidation follow-up | 104 additional passing cases compared with `73ffe0ef257e528035e3da613ad2951f85374afb`; no new dependency, Hub API, or active Zylos executor |
+| Earlier consolidation | Historical `4c1dfb86` added 104 passing cases compared with `73ffe0ef257e528035e3da613ad2951f85374afb`; that earlier release had no active Zylos executor |
+| Native Task-extension follow-up | 140 additional passing cases in 7 files compared with `4c1dfb86`; actual patched Core, bounded process controller, and temporary authenticated Hub, with no model calls |
+| Source package | 320 effective files verified; reversing the shipped patch exactly restores all 314 pinned upstream files and their modes; MIT notices retained |
 | Additional existing-suite regressions | 3 passing cases for finish confirmation and authenticated file downloads |
 | Server TypeScript build | Passed |
 | Next.js production build and static export | Passed for baseline `0893c8a`; dashboard unchanged by this worker patch; inspect the new head's Dashboard Build CI |
-| Updated unit syntax | systemd 255 accepted a temporary copy including the non-secret `SetCredential`, with both Exec commands replaced by `/usr/bin/true`; no service installed or started here |
-| Documentation checks | 21 Bash blocks pass `bash -n`; 17 relative links resolve across the five M1 documents; whitespace checked |
+| Unit syntax | systemd 255 accepts a temporary copy of the existing base unit with the Zylos mode drop-in, with target Exec commands replaced by `/usr/bin/true`; no service installed or started here |
+| Documentation checks | 33 Bash blocks pass `bash -n`; 52 local relative links resolve across README and six M1 documents; exact 20-check inventory and authored-source whitespace checked; target-host commands were not executed |
 
 Commands used with the Node 22 executable on PATH:
 
 ```bash
 npm test
 npm run build
+npm run check:zylos-source
 ```
 
 The unchanged dashboard build is checked by the new head's Dashboard Build CI;
 the baseline local static-export result is not a new local build claim.
+The whitespace check excludes the byte-preserved upstream tree and the unified
+patch file: the former retains two upstream blank-at-EOF cases, and the latter
+contains required blank context lines. Source-package verification checks their
+exact bytes and reversible reconstruction instead.
 
 The complete focused model-free suite is available as `npm run test:m1`;
 `npm run test:codex` retains the original Codex-only scope.
 No model credentials or model service are needed for it. Temporary Hub databases,
 Bot identities, files, and subprocesses belong only to test fixtures and are
 cleaned up by the tests; they are not production or M1 deployment identities.
+
+## Implemented Zylos Task extension after `4c1dfb86`
+
+The user selected engineering the missing native Task API. The current release
+ships complete fixed Zylos Core source with the project-maintained version
+`0.5.2+hxa.task.1`, a reversible patch, and a real HXA executor calling
+`CodexAdapter.runTask()`. This is an explicit extension of upstream
+`8ee9bd9007edab46f766f3574e0ad56cf69268c2`; it is not an interface claimed to exist
+in the unmodified upstream release or in the company's existing shared session.
+
+The Core builds isolated native memory and instructions, writes durable intent,
+owns task/run/attempt/execution correlation, and validates the bounded driver's
+proof. The HXA adapter verifies the fixed source before import, supplies the
+existing process/sandbox engine, and owns Hub lease and artifact settlement.
+Tests inspect the actual native instruction bytes received on child stdin; a
+label or C4 transport receipt cannot substitute for this execution path.
+
+| New suite | Passed | Scope |
+| --- | ---: | --- |
+| `zylos-core-task.test.ts` | 34 | Actual patched Core; private native memory/context, durable intent, duplicate/conflicting submission, scoped cancellation, deadline, late/corrupt callbacks, proof and cleanup, restart refusal |
+| `zylos-process.test.ts` | 20 | Actual bounded process controller and native instruction/proof plumbing; local Node fixtures replace Codex; nonzero exit, bad result, timeout, TERM/KILL, unrelated-process preservation |
+| `zylos-worker.test.ts` | 12 | Temporary authenticated SQLite Hub through actual Core, process fixtures, artifact upload/download and human acceptance; cancel, lease expiry, heartbeat 401, uncertain upload/finish and durable replay refusal |
+| `zylos-sandbox.test.ts` | 14 | Strict state-read denial, current workspace exception, direct/alias history canary, failure and cleanup boundaries; ordinary Node negative control, not a real bwrap pass |
+| `zylos-provenance.test.ts` | 19 | Complete source/patch reversal, ten corruption variants rejected, file/path trust, read-only sanitized ledger, real subprocess report with no `HOME` |
+| `zylos-cli.test.ts` | 20 | Actual relative/absolute/symlink CLI help, silent import, complete failed 20-check JSON, safe configuration failure, no model/Hub invocation |
+| `zylos-config.test.ts` | 21 | Explicit mode, capability validation, malformed/contradictory readiness rejection, precise expiry, stop reserve, admission guard before every claim |
+| **Total** | **140** | **Offline, with no production authentication, model, C4, or SSH calls** |
+
+The actual full run exposed and resolved two delivery defects: importing Task
+code without `HOME` reached an unused interactive default, and contradictory
+engine evidence could produce an omitted `ready` field. A builtins-only home
+fallback now permits the read-only import, and evidence validation produces
+explicit boolean failure. Both regressions remain in the passing suite.
+
+The current Zylos readiness contract has **20** named checks: the preserved ten
+baseline checks, six earlier sandbox checks, an additional history-read boundary,
+two source/API checks, and an execution-window check. Incomplete, duplicate,
+non-boolean, contradictory, or wrong-version engine evidence cannot yield a
+full pass. Source-only and time-window checks do not authenticate credentials or
+prove actual model availability.
+
+| Capability | Implemented and verified offline | Required target-host evidence |
+| --- | --- | --- |
+| Genuine Zylos Task execution | Fixed actual Core API, fresh native context, correlated controller proof and source audit | One real attempt's matching Core ledger, uploaded audit, process result and Hub run |
+| Claim, concurrency and lease fencing | Reused `runWorker`, concurrency 1, heartbeat/abort, before-claim window guard, no automatic replay | Effective single service/consumer and queue; real lifecycle evidence |
+| Task isolation | Unique private attempt paths, no shared Zylos/C4 calls, dedicated native memory, history-read deny profile | Fresh 20-check JSON under the actual UID, AppArmor, systemd and helper |
+| Cancellation, deadline and cleanup | Exact identity, bounded signal propagation, process-group drain and kill, late success rejected | Any unexercised host fault case remains explicitly pending; no extra model tests are implied |
+| Idempotency and recovery | Exclusive durable intent, same-process join, changed payload rejection, restart/replay refusal, combined read-only report | Reconciliation of both ledgers, Hub outcome, upload uncertainty and cgroup before restart |
+| Artifact ownership and delivery | Controller schema, regular-file/path/hash checks, upload and authenticated readback, actual temporary Hub acceptance | Mac authenticated downloads, Demo interactions and explicit human accept |
+| Existing company Zylos | No calls to shared launch/stop/auth/C4, no production files or memory copied | Existing process/session and service checks remain unchanged |
+| Deployment/rollback | Complete source, two additive templates, reviewed consolidated runbook and static unit checks | One exact release switch, approved exact policy, then stop and restore persistent check-only mode |
+
+The maintained Core extension is a separate Task-mode copy, using the existing
+dedicated service identity and login. It does not attach to, upgrade, or claim to
+execute inside the old `/root/zylos` interactive session. Upstream's own separate
+test suites under the full vendor tree are not collected by HXA Vitest; the seven
+explicit HXA suites above exercise the modified runtime used by this release.
 
 ## CLI entry regression after `0893c8a`
 
@@ -128,7 +192,7 @@ configuration after real execution is authorized; it is not part of `--check`.
 Its result and the following exec are separate policy snapshots, not an atomic
 guarantee against concurrent host/cloud policy changes.
 
-## Consolidated delivery after `73ffe0e`
+## Historical consolidated delivery after `73ffe0e`
 
 The new work preserves the Codex executor and consolidates the deployment into
 one release/acceptance sequence. It does not deploy patches individually. The
@@ -141,7 +205,8 @@ Official Zylos Core `v0.5.2` was inspected at commit
 interfaces are in [the Zylos assessment](m1-zylos-integration.md). Its shared
 runtime/C4 transport cannot supply the strict per-task isolation, result,
 artifact ownership, cancellation, idempotency and lease-fencing contract.
-No supported Zylos task interface was invented and no active executor was shipped.
+No native Task interface or active executor was shipped in that earlier
+`4c1dfb86` delivery. The implemented custom extension is described above.
 
 The additional offline validation establishes:
 
@@ -211,9 +276,9 @@ The deployment assistant reports that the dedicated identities, approved token,
 fresh login, model/effort pair, and baseline Hub `0893c8a` are already established.
 Preserve them; do not repeat provisioning. The failed first one-shot has ended.
 The user has now approved the exact prepared AppArmor policy plus one retry
-after isolation checks. Follow the [consolidated delivery](m1-consolidated-delivery.md)
+after isolation checks. Follow the [current Zylos Task runbook](m1-zylos-task-runtime.md)
 without asking for those same approvals again. The current token expires at
-`2026-11-04T06:38:16Z` and cannot be renewed automatically.
+`2026-11-04T06:38:16.417Z` and cannot be renewed automatically.
 
 The following remain target-host actions, not actions performed or accepted
 from this code-authoring environment:
@@ -225,7 +290,7 @@ from this code-authoring environment:
   AppArmor artifact and scoped rollback. Offline parser success is not runtime
   enforcement. No policy-installation script,
   host capability grant, global userns change, or sandbox downgrade is delivered.
-- After any approved prerequisite correction, capture a fresh complete 16-check
+- After any approved prerequisite correction, capture a fresh complete 20-check
   result. The development fixtures cannot verify target-host bwrap/AppArmor.
 - After the queue/window and isolation gates pass, execute the already-approved
   single retry and validate the model/business Demo under that unit, including
@@ -244,7 +309,7 @@ malicious process cannot create a new session. Use the dedicated trusted pilot
 identity and the documented host controls. A stronger hostile-task isolation
 design is outside this milestone.
 
-Use [the deployment runbook](m1-codex-worker.md) and
-[the Zylos handoff](m1-zylos-handoff.md) for the next phase. Keep the PR a draft and
+Use [the Zylos Task deployment runbook](m1-zylos-task-runtime.md) for the next
+phase; older Codex/handoff documents are historical references. Keep the PR a draft and
 record code delivery, remote CI, local host preflight, and real acceptance as
 separate milestones.

@@ -1,5 +1,12 @@
 # M1 Codex Worker: Deployment, Acceptance, and Recovery
 
+**Current selected route:** the user chose the implemented custom Zylos Core
+Task runtime. Follow [its unified runbook](m1-zylos-task-runtime.md), with the new
+`zylos-worker.mjs` entrypoint, exact token deadline and 20 checks. This document
+describes the reusable underlying mechanisms and the earlier independent Codex
+backend. Do not activate that backend as a fallback or replay its historical
+installation/one-shot steps for the new Zylos route.
+
 M1 adds one dedicated, serial Codex executor beside the existing M0 pilot. The
 Hub continues to own tasks, attempts, leases, cancellation, and human acceptance.
 The worker runs `codex exec` in a per-attempt workspace and uploads bounded result
@@ -11,9 +18,9 @@ sections below record later deployment state. Record repository tests, CI, local
 readiness, and real business acceptance separately. Do not turn an unperformed
 check or a correctly failed task into a success claim.
 
-**Current operator entry point:** use the
-[consolidated M1 delivery](m1-consolidated-delivery.md) for one complete release
-and one deployment/acceptance sequence. Do not deploy `73ffe0e` separately. The
+**Earlier Codex operator entry point:** the
+[consolidated M1 delivery](m1-consolidated-delivery.md) records that earlier complete
+release and acceptance sequence. Do not deploy `73ffe0e` separately. The
 previously prepared exact-helper AppArmor policy and one Demo retry after
 isolation checks are now approved. Preserve the existing identities/login/model;
 the current token expires at `2026-11-04T06:38:16Z` and is not renewed automatically.

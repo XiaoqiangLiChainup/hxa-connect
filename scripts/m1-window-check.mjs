@@ -2,7 +2,7 @@
 import { isMainModule } from './cli-entrypoint.mjs';
 
 const MIN_RESERVE_MS = 300_000;
-const HELP = `Usage: node scripts/m1-window-check.mjs --expires-at <YYYY-MM-DDTHH:mm:ssZ> --task-timeout-ms <milliseconds> [--reserve-ms <milliseconds>]
+const HELP = `Usage: node scripts/m1-window-check.mjs --expires-at <YYYY-MM-DDTHH:mm:ss[.SSS]Z> --task-timeout-ms <milliseconds> [--reserve-ms <milliseconds>]
 
 Check the reported token lifetime against the host clock, task budget, and at least five minutes of reserve.
 This reads no token, makes no Hub/model request, and starts no task. It cannot prove token validity or select a task.
@@ -14,9 +14,10 @@ export class ExecutionWindowError extends Error {
 }
 
 export function evaluateExecutionWindow({ expiresAt, taskTimeoutMs, reserveMs = MIN_RESERVE_MS, now = Date.now() } = {}) {
-  if (typeof expiresAt !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/u.test(expiresAt)) throw new ExecutionWindowError();
+  if (typeof expiresAt !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u.test(expiresAt)) throw new ExecutionWindowError();
   const expiry = Date.parse(expiresAt);
-  if (!Number.isFinite(expiry) || new Date(expiry).toISOString() !== expiresAt.replace('Z', '.000Z')
+  const canonicalExpiry = expiresAt.includes('.') ? expiresAt : expiresAt.replace('Z', '.000Z');
+  if (!Number.isFinite(expiry) || new Date(expiry).toISOString() !== canonicalExpiry
     || !Number.isSafeInteger(now) || now < 0 || !Number.isSafeInteger(taskTimeoutMs)
     || taskTimeoutMs < 1000 || taskTimeoutMs > 43_200_000 || !Number.isSafeInteger(reserveMs)
     || reserveMs < MIN_RESERVE_MS || reserveMs > 3_600_000) throw new ExecutionWindowError();

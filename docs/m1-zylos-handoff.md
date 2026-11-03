@@ -1,4 +1,12 @@
-# M1 Handoff to the Company-Side Zylos / Host Operator
+# M1 Host Handoff: Earlier Codex Backend Reference
+
+**Current selected route:** use the implemented
+[Zylos Core Task runtime handoff](m1-zylos-task-runtime.md). It supersedes this
+earlier Codex-only deployment procedure, uses the genuine custom Core task API,
+and requires 20 checks. The exact existing token deadline is
+`2026-11-04T06:38:16.417Z`. The established identities, login and recorded scoped
+approvals are retained. The remaining sections are mechanism/history references;
+do not activate a Codex fallback or ask for the same initial approvals again.
 
 Use the company's existing authorized channel. This is a deployment handoff for
 one dedicated Codex task worker, not a request to change Zylos itself. Follow

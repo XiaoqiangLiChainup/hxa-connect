@@ -10,6 +10,7 @@ export const SANDBOX_CHECK_NAMES = Object.freeze([
   'sandbox_command_startup', 'sandbox_workspace_write', 'sandbox_outside_write_denied',
   'sandbox_credential_reads_denied', 'sandbox_network_restricted', 'sandbox_probe_cleanup',
 ]);
+const TASK_HISTORY_CHECK = 'sandbox_task_history_reads_denied';
 const GUIDANCE = Object.freeze({
   SANDBOX_PREREQUISITES_NOT_MET: 'Resolve the failed local identity, directory, executable, or version checks before sandbox verification.',
   SANDBOX_CANARY_INVALID: 'Install the documented non-secret SetCredential canary beside the task credential; never substitute the task token or authentication files.',
@@ -26,7 +27,12 @@ const GUIDANCE = Object.freeze({
 });
 
 export function sandboxNotRun(code = 'SANDBOX_PREREQUISITES_NOT_MET', config) {
-  return { checks: SANDBOX_CHECK_NAMES.map(name => ({ name, passed: false })),
+  // Keep cleanup last: every preceding boundary must pass before final cleanup
+  // can complete readiness. Default Codex callers retain the original six names.
+  const names = config?.isolateStateReads === true
+    ? [...SANDBOX_CHECK_NAMES.slice(0, -1), TASK_HISTORY_CHECK, SANDBOX_CHECK_NAMES.at(-1)]
+    : SANDBOX_CHECK_NAMES;
+  return { checks: names.map(name => ({ name, passed: false })),
     sandbox: { scope: 'model-free-local-probe', profile: config?.sandboxProfile ?? null, ran: false, code, guidance: GUIDANCE[code] } };
 }
 
@@ -49,6 +55,11 @@ function realDirectory(directory) {
 
 function markerEquals(filename, expected) {
   try { return ordinaryBytes(filename) === expected; } catch { return false; }
+}
+
+function aliasMatches(filename, target) {
+  try { return fs.lstatSync(filename).isSymbolicLink() && fs.readlinkSync(filename) === target; }
+  catch { return false; }
 }
 
 function createWitness() {
@@ -219,10 +230,20 @@ export async function checkSandbox(config, { runCommand = runSandboxCommand, sig
       fs.symlinkSync(filename, alias);
       return alias;
     });
+    let taskHistory;
+    if (config.isolateStateReads === true) {
+      // This is new synthetic data outside the current workspace, never an
+      // existing run, control file, context snapshot, or historical transcript.
+      taskHistory = { canary: path.join(root, 'task-history-canary'),
+        alias: path.join(workspace, 'task-history-link') };
+      fs.writeFileSync(taskHistory.canary, nonce, { flag: 'wx', mode: 0o600 });
+      fs.symlinkSync(taskHistory.canary, taskHistory.alias);
+    }
     witness = createWitness();
     await witness.start(signal);
     if (signal?.aborted) { code = 'SANDBOX_PROBE_ABORTED'; return report; }
-    const input = { nonce, workspace, outside, canaries, aliases, port: witness.port };
+    const input = { nonce, workspace, outside, canaries, aliases, port: witness.port,
+      ...(taskHistory ? { taskHistory } : {}) };
     report.sandbox.ran = true;
     cleanupSafe = false;
     processResult = await runCommand({
@@ -243,6 +264,7 @@ export async function checkSandbox(config, { runCommand = runSandboxCommand, sig
     let evidence;
     try { evidence = JSON.parse(processResult.stdout); } catch { return report; }
     const keys = ['protocol', 'nonce', 'workspace_write', 'outside_write_denied', 'credential_reads_denied', 'network_restricted'];
+    if (taskHistory) keys.push('task_history_reads_denied');
     if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)
       || Object.keys(evidence).length !== keys.length || keys.some(key => !Object.hasOwn(evidence, key))
       || evidence.protocol !== 'hxa-sandbox-probe-v1' || evidence.nonce !== nonce
@@ -255,6 +277,10 @@ export async function checkSandbox(config, { runCommand = runSandboxCommand, sig
     set('sandbox_credential_reads_denied', evidence.credential_reads_denied
       && canaries.every((filename, i) => markerEquals(filename, i === 0 ? SANDBOX_CANARY_VALUE : nonce)));
     set('sandbox_network_restricted', evidence.network_restricted && !witness.contacted());
+    if (taskHistory) {
+      set(TASK_HISTORY_CHECK, evidence.task_history_reads_denied
+        && markerEquals(taskHistory.canary, nonce) && aliasMatches(taskHistory.alias, taskHistory.canary));
+    }
     code = report.checks.slice(0, -1).every(check => check.passed) ? null : 'SANDBOX_BOUNDARY_FAILED';
   } catch {
     if (signal?.aborted) code = 'SANDBOX_PROBE_ABORTED';

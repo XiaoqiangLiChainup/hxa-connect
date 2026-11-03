@@ -326,6 +326,7 @@ async function executeClaim(claim, config, dependencies) {
 export async function runWorker(configuration, {
   executeTask,
   onRunSettled,
+  beforeClaim,
   signal,
   fetchImpl = globalThis.fetch,
   logger = entry => console.log(JSON.stringify(entry)),
@@ -333,6 +334,7 @@ export async function runWorker(configuration, {
 } = {}) {
   if (typeof executeTask !== 'function') throw new ConfigurationError('An explicit executeTask adapter is required.');
   if (onRunSettled !== undefined && typeof onRunSettled !== 'function') throw new ConfigurationError('onRunSettled must be a function when provided.');
+  if (beforeClaim !== undefined && typeof beforeClaim !== 'function') throw new ConfigurationError('beforeClaim must be a function when provided.');
   if (!configuration?.token || !configuration?.runnerId) throw new ConfigurationError('A bot token and runner ID are required.');
   const config = { ...DEFAULTS, ...configuration, url: normalizeBaseUrl(configuration.url) };
   const secrets = new Set([config.token]);
@@ -342,6 +344,10 @@ export async function runWorker(configuration, {
   log('runner_started', { runner_id: config.runnerId, once: Boolean(config.once) });
   try {
     while (!signal?.aborted) {
+      // Optional local admission checks run before any claim side effect. No
+      // bearer/lease token or Task data is exposed, and the default is unchanged.
+      if (beforeClaim) await beforeClaim({ signal });
+      if (signal?.aborted) break;
       const claim = await client.claim(config.runnerId, signal);
       if (!claim || !Object.hasOwn(claim, 'task')) {
         throw new RunnerError('Claim response has no task field; no task was executed.', { code: 'INVALID_CLAIM_RESPONSE' });
