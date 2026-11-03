@@ -5,7 +5,7 @@
   "core_version": "0.5.2",
   "extension_id": "hxa-m1-zylos-task-v1",
   "extension_version": "0.5.2+hxa.task.1",
-  "patch_sha256": "7cc19f3c0b14e0fc845cefd1d50517c199a4130cabc6189e712ff8e2cef29684",
+  "patch_sha256": "ed0391e70e113ae9e3031e8cebb7a251a974487a4726bc2aba452274633793e6",
   "upstream_manifest_sha256": "0f484fd198876667275440363048875675c4e99cee6c593191c9fd3bfc82446d",
   "files": [
     {
@@ -31,7 +31,7 @@
     {
       "path": "CHANGELOG.md",
       "mode": 420,
-      "sha256": "8902e10a3a59ced8ef2d5003ba8463b9e9d58c328579a6271b695e98d3517c07"
+      "sha256": "368b2db2541f37a792ed36304b2e7d76d4f5d619586e02a6ceaa5418db74d1a1"
     },
     {
       "path": "CLAUDE.md",
@@ -771,12 +771,12 @@
     {
       "path": "skills/activity-monitor/scripts/monitor.js",
       "mode": 420,
-      "sha256": "c8ab3134a3c11202802258f9c5da3ef6ace7783d147796451ef21751a86c1452"
+      "sha256": "3ef0ecf97af30d076ce457b419f6f7d663c506582d057ec73843692acd458657"
     },
     {
       "path": "skills/activity-monitor/scripts/proc-sampler.js",
       "mode": 420,
-      "sha256": "59c1dc79a7ebb006aa8835ae679e35f8797a4f91e5ed04035e22b84b7521b5f5"
+      "sha256": "4e45c4252ab71fe16e95111a99a2bb999408bb9919eefc86749dc95c9e5b4a81"
     },
     {
       "path": "skills/activity-monitor/scripts/session-foreground.js",
@@ -1271,7 +1271,7 @@
     {
       "path": "skills/upgrade-claude/scripts/upgrade.js",
       "mode": 420,
-      "sha256": "311a9db4efbada7e6c7efb9b6491400511478603382576e2bc5444cacff9d8b1"
+      "sha256": "e60cd669ca4513c2bad51891523dc5ebe82d2713b70147daa7a544db9a2aae24"
     },
     {
       "path": "skills/web-console/SKILL.md",
@@ -1316,7 +1316,7 @@
     {
       "path": "skills/web-console/scripts/server.js",
       "mode": 420,
-      "sha256": "26e3bed5055452c4cdb0e930e0dd62dbaeef0f032f23cef1d51fe6c2c4cfd27b"
+      "sha256": "faa14963cdae45e5856d9a85870371d0d0be935503fc03d1f64d6e87427dc5d5"
     },
     {
       "path": "skills/zylos-memory/SKILL.md",

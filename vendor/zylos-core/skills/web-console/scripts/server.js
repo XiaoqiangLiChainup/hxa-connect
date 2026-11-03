@@ -450,7 +450,7 @@ app.get('/', (req, res) => {
 const BIND_HOST = process.env.WEB_CONSOLE_BIND || '127.0.0.1';
 server.listen(PORT, BIND_HOST, () => {
   console.log(`Web Console server running on http://${BIND_HOST}:${PORT}`);
-  console.log(`WebSocket available at ws://${BIND_HOST}:${PORT}`);
+  console.log('WebSocket upgrades share this HTTP backend; use an HTTPS/WSS reverse proxy for remote clients.');
   console.log(`Authentication: ${AUTH_ENABLED ? 'enabled' : 'disabled (no password set)'}`);
   console.log(`Database: ${DB_PATH}`);
 });

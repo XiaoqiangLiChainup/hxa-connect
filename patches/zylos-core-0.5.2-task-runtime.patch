@@ -1,8 +1,8 @@
 diff --git a/CHANGELOG.md b/CHANGELOG.md
-index f43916c..8c833be 100644
+index f43916c..7a0a5df 100644
 --- a/CHANGELOG.md
 +++ b/CHANGELOG.md
-@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
+@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  
  ## [Unreleased]
  
@@ -15,6 +15,7 @@ index f43916c..8c833be 100644
 +### Changed
 +- Extract native memory snapshot composition into a builtins-only module shared with the existing interactive hook; retain the interactive hook's output and diagnostic behavior.
 +- Allow Task/report imports without `HOME` by using the operating system's home-directory fallback for unused interactive defaults; importing does not access that directory.
++- Remove shell interpolation from bundled maintenance process probes and sleep arguments; clarify that the legacy web-console HTTP backend requires an HTTPS/WSS reverse proxy for remote clients. These components are not started by Task mode, and this does not add TLS to that backend.
 +- This is an HXA-maintained extension of upstream commit `8ee9bd9007edab46f766f3574e0ad56cf69268c2`, not an upstream Zylos release. No dependency or install lifecycle changes.
 +
  ## [0.5.2] - 2026-06-02
@@ -817,6 +818,175 @@ index 46a579a..b57d9d6 100644
    "type": "module",
    "description": "Autonomous AI Agent Infrastructure",
    "main": "cli/zylos.js",
+diff --git a/skills/activity-monitor/scripts/monitor.js b/skills/activity-monitor/scripts/monitor.js
+index 4a7ce4b..bada00d 100644
+--- a/skills/activity-monitor/scripts/monitor.js
++++ b/skills/activity-monitor/scripts/monitor.js
+@@ -619,14 +619,20 @@ function isPidAlive(pid) {
+   }
+ }
+ 
++function parseFirstPid(output) {
++  const firstLine = output.split('\n', 1)[0].trim();
++  if (!/^\d+$/.test(firstLine)) return 0;
++  const pid = Number(firstLine);
++  return Number.isInteger(pid) && pid > 0 && pid <= 2147483647 ? pid : 0;
++}
++
+ function getTmuxPanePid(sessionName) {
+   try {
+-    const out = execSync(
+-      `tmux list-panes -t "${sessionName}" -F '#{pane_pid}' 2>/dev/null | head -1`,
+-      { encoding: 'utf8', timeout: 3000 }
+-    ).trim();
+-    const pid = Number.parseInt(out, 10);
+-    return Number.isInteger(pid) && pid > 0 ? pid : 0;
++    const out = execFileSync(
++      'tmux', ['list-panes', '-t', sessionName, '-F', '#{pane_pid}'],
++      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 3000, shell: false }
++    );
++    return parseFirstPid(out);
+   } catch {
+     return 0;
+   }
+@@ -637,9 +643,11 @@ function getTmuxClaudePid(sessionName) {
+   if (!panePid) return 0;
+ 
+   try {
+-    const name = execSync(`ps -p ${panePid} -o comm= 2>/dev/null`, {
++    const name = execFileSync('ps', ['-p', String(panePid), '-o', 'comm='], {
+       encoding: 'utf8',
+-      timeout: 3000
++      stdio: ['ignore', 'pipe', 'ignore'],
++      timeout: 3000,
++      shell: false
+     }).trim();
+     if (name === 'claude') return panePid;
+   } catch {
+@@ -647,12 +655,13 @@ function getTmuxClaudePid(sessionName) {
+   }
+ 
+   try {
+-    const out = execSync(`pgrep -P ${panePid} -f "claude" | head -1`, {
++    const out = execFileSync('pgrep', ['-P', String(panePid), '-f', 'claude'], {
+       encoding: 'utf8',
+-      timeout: 3000
+-    }).trim();
+-    const childPid = Number.parseInt(out, 10);
+-    return Number.isInteger(childPid) && childPid > 0 ? childPid : 0;
++      stdio: ['ignore', 'pipe', 'ignore'],
++      timeout: 3000,
++      shell: false
++    });
++    return parseFirstPid(out);
+   } catch {
+     return 0;
+   }
+diff --git a/skills/activity-monitor/scripts/proc-sampler.js b/skills/activity-monitor/scripts/proc-sampler.js
+index 9f733eb..0043312 100644
+--- a/skills/activity-monitor/scripts/proc-sampler.js
++++ b/skills/activity-monitor/scripts/proc-sampler.js
+@@ -18,7 +18,7 @@
+ import fs from 'fs';
+ import path from 'path';
+ import os from 'os';
+-import { execSync } from 'child_process';
++import { execFileSync } from 'child_process';
+ 
+ const SAMPLE_INTERVAL = 10;   // seconds between samples
+ const FROZEN_THRESHOLD = 60;  // seconds of zero delta → frozen
+@@ -29,6 +29,13 @@ const PROC_STATE_FILE = path.join(
+   'proc-state.json'
+ );
+ 
++function parseFirstPid(output) {
++  const firstLine = output.split('\n', 1)[0].trim();
++  if (!/^\d+$/.test(firstLine)) return null;
++  const pid = Number(firstLine);
++  return Number.isInteger(pid) && pid > 0 && pid <= 2147483647 ? pid : null;
++}
++
+ export class ProcSampler {
+   /**
+    * @param {object} opts
+@@ -169,21 +176,19 @@ export class ProcSampler {
+    */
+   _findRuntimePid() {
+     try {
+-      const panePid = execSync(
+-        `tmux list-panes -t "${this._sessionName}" -F '#{pane_pid}' 2>/dev/null`,
+-        { encoding: 'utf8', stdio: 'pipe', timeout: 3000 }
+-      ).trim();
+-      if (!panePid) return null;
++      const panePid = parseFirstPid(execFileSync(
++        'tmux', ['list-panes', '-t', this._sessionName, '-F', '#{pane_pid}'],
++        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 3000, shell: false }
++      ));
++      if (panePid === null) return null;
+ 
+-      const childPid = execSync(
+-        `pgrep -P ${panePid}`,
+-        { encoding: 'utf8', stdio: 'pipe', timeout: 1000 }
+-      ).trim();
+-      if (!childPid) return null;
++      const childPid = execFileSync(
++        'pgrep', ['-P', String(panePid)],
++        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 1000, shell: false }
++      );
+ 
+       // pgrep may return multiple children; take the first
+-      const pid = parseInt(childPid.split('\n')[0], 10);
+-      return Number.isFinite(pid) && pid > 0 ? pid : null;
++      return parseFirstPid(childPid);
+     } catch {
+       return null;
+     }
+@@ -221,10 +226,11 @@ export class ProcSampler {
+ 
+   /** macOS: use top to get CSW for a single process */
+   _sampleDarwin(pid) {
++    if (!Number.isInteger(pid) || pid <= 0 || pid > 2147483647) return null;
+     try {
+-      const out = execSync(
+-        `top -l 1 -pid ${pid} -stats pid,csw -s 0 2>/dev/null`,
+-        { encoding: 'utf8', stdio: 'pipe', timeout: 5000 }
++      const out = execFileSync(
++        'top', ['-l', '1', '-pid', String(pid), '-stats', 'pid,csw', '-s', '0'],
++        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 5000, shell: false }
+       );
+       // Parse the last line that looks like: "  <pid>  <csw>"
+       const lines = out.trim().split('\n');
+diff --git a/skills/upgrade-claude/scripts/upgrade.js b/skills/upgrade-claude/scripts/upgrade.js
+index cdff021..cffc468 100644
+--- a/skills/upgrade-claude/scripts/upgrade.js
++++ b/skills/upgrade-claude/scripts/upgrade.js
+@@ -29,7 +29,12 @@ function logError(msg) {
+ }
+ 
+ function sleep(seconds) {
+-  execSync(`sleep ${seconds}`);
++  if (!Number.isFinite(seconds) || seconds < 0 || seconds > MAX_EXIT_WAIT) {
++    throw new RangeError('Sleep duration must be between 0 and 120 seconds.');
++  }
++  execFileSync('sleep', [String(seconds)], {
++    stdio: 'ignore', timeout: Math.ceil(seconds * 1000) + 1000, shell: false
++  });
+ }
+ 
+ function enqueueExit() {
+diff --git a/skills/web-console/scripts/server.js b/skills/web-console/scripts/server.js
+index 9380aa6..86b64f7 100644
+--- a/skills/web-console/scripts/server.js
++++ b/skills/web-console/scripts/server.js
+@@ -450,7 +450,7 @@ app.get('/', (req, res) => {
+ const BIND_HOST = process.env.WEB_CONSOLE_BIND || '127.0.0.1';
+ server.listen(PORT, BIND_HOST, () => {
+   console.log(`Web Console server running on http://${BIND_HOST}:${PORT}`);
+-  console.log(`WebSocket available at ws://${BIND_HOST}:${PORT}`);
++  console.log('WebSocket upgrades share this HTTP backend; use an HTTPS/WSS reverse proxy for remote clients.');
+   console.log(`Authentication: ${AUTH_ENABLED ? 'enabled' : 'disabled (no password set)'}`);
+   console.log(`Database: ${DB_PATH}`);
+ });
 diff --git a/skills/zylos-memory/scripts/memory-snapshot.js b/skills/zylos-memory/scripts/memory-snapshot.js
 new file mode 100644
 index 0000000..cdf68d3

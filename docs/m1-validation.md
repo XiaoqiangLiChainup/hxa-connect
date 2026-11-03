@@ -12,11 +12,11 @@ not a record of a company-server deployment or a real model/business acceptance.
 | Gate | Result |
 | --- | --- |
 | Runtime | Node 22.23.4 |
-| Complete Vitest suite | 1114 passed, 7 Redis-dependent tests skipped, 0 failed; 1121 total in 41 files |
-| M1 suites | 498 passing cases: the earlier 358 Codex/sandbox/static-capability/window cases plus 140 cases for the implemented native Zylos Task extension |
+| Complete Vitest suite | 1131 passed, 7 Redis-dependent tests skipped, 0 failed; 1138 total in 42 files |
+| M1 suites | 515 passing cases: the earlier 358 Codex/sandbox/static-capability/window cases plus 140 native Task-extension cases and 17 bundled maintenance-source regressions |
 | Sandbox-gap follow-up | 119 additional passing cases compared with worker baseline `1544bd94aaee3505c8d698683042ca3cf2c31688`; preserves all earlier suites |
 | Earlier consolidation | Historical `4c1dfb86` added 104 passing cases compared with `73ffe0ef257e528035e3da613ad2951f85374afb`; that earlier release had no active Zylos executor |
-| Native Task-extension follow-up | 140 additional passing cases in 7 files compared with `4c1dfb86`; actual patched Core, bounded process controller, and temporary authenticated Hub, with no model calls |
+| Native Task-extension follow-up | 157 additional passing cases in 8 files compared with `4c1dfb86`; actual patched Core, bounded process controller, temporary authenticated Hub, and isolated maintenance-function tests, with no model calls |
 | Source package | 320 effective files verified; reversing the shipped patch exactly restores all 314 pinned upstream files and their modes; MIT notices retained |
 | Additional existing-suite regressions | 3 passing cases for finish confirmation and authenticated file downloads |
 | Server TypeScript build | Passed |
@@ -70,7 +70,8 @@ label or C4 transport receipt cannot substitute for this execution path.
 | `zylos-provenance.test.ts` | 19 | Complete source/patch reversal, ten corruption variants rejected, file/path trust, read-only sanitized ledger, real subprocess report with no `HOME` |
 | `zylos-cli.test.ts` | 20 | Actual relative/absolute/symlink CLI help, silent import, complete failed 20-check JSON, safe configuration failure, no model/Hub invocation |
 | `zylos-config.test.ts` | 21 | Explicit mode, capability validation, malformed/contradictory readiness rejection, precise expiry, stop reserve, admission guard before every claim |
-| **Total** | **140** | **Offline, with no production authentication, model, C4, or SSH calls** |
+| `zylos-upstream-safety.test.ts` | 17 | Actual maintenance-function declarations evaluated in a VM with stubbed process calls; shell metacharacters, PID bounds/output, delay bounds and existing polling behavior; no module startup |
+| **Total** | **157** | **Offline, with no production authentication, model, C4, or SSH calls** |
 
 The actual full run exposed and resolved two delivery defects: importing Task
 code without `HOME` reached an unused interactive default, and contradictory
@@ -99,8 +100,19 @@ prove actual model availability.
 The maintained Core extension is a separate Task-mode copy, using the existing
 dedicated service identity and login. It does not attach to, upgrade, or claim to
 execute inside the old `/root/zylos` interactive session. Upstream's own separate
-test suites under the full vendor tree are not collected by HXA Vitest; the seven
-explicit HXA suites above exercise the modified runtime used by this release.
+test suites under the full vendor tree are not collected by HXA Vitest. The
+seven runtime suites above exercise this release's Task path; the additional
+maintenance regression evaluates only the actual bounded declarations, with no
+import-time daemon, upgrade, authentication, or operating-system commands.
+
+The first remote SAST scan at `6c77289` found five shell-interpolation call sites
+in inactive bundled maintenance code and one diagnostic WebSocket string. The
+follow-up replaces seven related shell calls (including two in the same PID
+discovery chain) with executable/argument arrays, strict PID parsing, and bounded
+sleep input. The diagnostic now accurately describes the legacy HTTP backend
+and its remote HTTPS/WSS proxy requirement. It does not add backend TLS or change
+binding, authentication, Docker, or any company service. All changes are in the
+reversible source patch; no rule suppression or vendor scan exclusion was added.
 
 ## CLI entry regression after `0893c8a`
 

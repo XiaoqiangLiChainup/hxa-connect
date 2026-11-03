@@ -18,7 +18,7 @@
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 const SAMPLE_INTERVAL = 10;   // seconds between samples
 const FROZEN_THRESHOLD = 60;  // seconds of zero delta → frozen
@@ -28,6 +28,13 @@ const PROC_STATE_FILE = path.join(
   'activity-monitor',
   'proc-state.json'
 );
+
+function parseFirstPid(output) {
+  const firstLine = output.split('\n', 1)[0].trim();
+  if (!/^\d+$/.test(firstLine)) return null;
+  const pid = Number(firstLine);
+  return Number.isInteger(pid) && pid > 0 && pid <= 2147483647 ? pid : null;
+}
 
 export class ProcSampler {
   /**
@@ -169,21 +176,19 @@ export class ProcSampler {
    */
   _findRuntimePid() {
     try {
-      const panePid = execSync(
-        `tmux list-panes -t "${this._sessionName}" -F '#{pane_pid}' 2>/dev/null`,
-        { encoding: 'utf8', stdio: 'pipe', timeout: 3000 }
-      ).trim();
-      if (!panePid) return null;
+      const panePid = parseFirstPid(execFileSync(
+        'tmux', ['list-panes', '-t', this._sessionName, '-F', '#{pane_pid}'],
+        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 3000, shell: false }
+      ));
+      if (panePid === null) return null;
 
-      const childPid = execSync(
-        `pgrep -P ${panePid}`,
-        { encoding: 'utf8', stdio: 'pipe', timeout: 1000 }
-      ).trim();
-      if (!childPid) return null;
+      const childPid = execFileSync(
+        'pgrep', ['-P', String(panePid)],
+        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 1000, shell: false }
+      );
 
       // pgrep may return multiple children; take the first
-      const pid = parseInt(childPid.split('\n')[0], 10);
-      return Number.isFinite(pid) && pid > 0 ? pid : null;
+      return parseFirstPid(childPid);
     } catch {
       return null;
     }
@@ -221,10 +226,11 @@ export class ProcSampler {
 
   /** macOS: use top to get CSW for a single process */
   _sampleDarwin(pid) {
+    if (!Number.isInteger(pid) || pid <= 0 || pid > 2147483647) return null;
     try {
-      const out = execSync(
-        `top -l 1 -pid ${pid} -stats pid,csw -s 0 2>/dev/null`,
-        { encoding: 'utf8', stdio: 'pipe', timeout: 5000 }
+      const out = execFileSync(
+        'top', ['-l', '1', '-pid', String(pid), '-stats', 'pid,csw', '-s', '0'],
+        { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 5000, shell: false }
       );
       // Parse the last line that looks like: "  <pid>  <csw>"
       const lines = out.trim().split('\n');

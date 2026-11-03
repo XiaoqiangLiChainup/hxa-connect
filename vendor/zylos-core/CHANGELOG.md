@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Extract native memory snapshot composition into a builtins-only module shared with the existing interactive hook; retain the interactive hook's output and diagnostic behavior.
 - Allow Task/report imports without `HOME` by using the operating system's home-directory fallback for unused interactive defaults; importing does not access that directory.
+- Remove shell interpolation from bundled maintenance process probes and sleep arguments; clarify that the legacy web-console HTTP backend requires an HTTPS/WSS reverse proxy for remote clients. These components are not started by Task mode, and this does not add TLS to that backend.
 - This is an HXA-maintained extension of upstream commit `8ee9bd9007edab46f766f3574e0ad56cf69268c2`, not an upstream Zylos release. No dependency or install lifecycle changes.
 
 ## [0.5.2] - 2026-06-02

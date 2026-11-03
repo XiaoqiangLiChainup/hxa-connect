@@ -29,7 +29,12 @@ function logError(msg) {
 }
 
 function sleep(seconds) {
-  execSync(`sleep ${seconds}`);
+  if (!Number.isFinite(seconds) || seconds < 0 || seconds > MAX_EXIT_WAIT) {
+    throw new RangeError('Sleep duration must be between 0 and 120 seconds.');
+  }
+  execFileSync('sleep', [String(seconds)], {
+    stdio: 'ignore', timeout: Math.ceil(seconds * 1000) + 1000, shell: false
+  });
 }
 
 function enqueueExit() {

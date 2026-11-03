@@ -23,6 +23,13 @@ global CLI, runtime auto-detection, C4, PM2, scheduler or context monitor is
 started. The full tree includes these original implementations for provenance
 and review; their presence does not authorize invoking them.
 
+The patch also hardens a few bundled, inactive maintenance functions that remote
+SAST identified: process arguments are passed without a shell, and the legacy
+web-console diagnostic correctly describes its HTTP backend and remote TLS proxy
+requirement. This does not add TLS to that backend, start it, or change the
+company's installed Zylos. These changes remain in the reversible source patch;
+no finding is hidden through a rule suppression or vendor scan exclusion.
+
 Upstream's independent Jest/node test suites and poster assets are retained as
 source. HXA's Vitest collection excludes `vendor/**` and instead runs the explicit
 `test/zylos-*.test.ts` suites against the actual modified Core, controller and

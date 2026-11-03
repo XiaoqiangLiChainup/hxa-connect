@@ -619,14 +619,20 @@ function isPidAlive(pid) {
   }
 }
 
+function parseFirstPid(output) {
+  const firstLine = output.split('\n', 1)[0].trim();
+  if (!/^\d+$/.test(firstLine)) return 0;
+  const pid = Number(firstLine);
+  return Number.isInteger(pid) && pid > 0 && pid <= 2147483647 ? pid : 0;
+}
+
 function getTmuxPanePid(sessionName) {
   try {
-    const out = execSync(
-      `tmux list-panes -t "${sessionName}" -F '#{pane_pid}' 2>/dev/null | head -1`,
-      { encoding: 'utf8', timeout: 3000 }
-    ).trim();
-    const pid = Number.parseInt(out, 10);
-    return Number.isInteger(pid) && pid > 0 ? pid : 0;
+    const out = execFileSync(
+      'tmux', ['list-panes', '-t', sessionName, '-F', '#{pane_pid}'],
+      { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 3000, shell: false }
+    );
+    return parseFirstPid(out);
   } catch {
     return 0;
   }
@@ -637,9 +643,11 @@ function getTmuxClaudePid(sessionName) {
   if (!panePid) return 0;
 
   try {
-    const name = execSync(`ps -p ${panePid} -o comm= 2>/dev/null`, {
+    const name = execFileSync('ps', ['-p', String(panePid), '-o', 'comm='], {
       encoding: 'utf8',
-      timeout: 3000
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 3000,
+      shell: false
     }).trim();
     if (name === 'claude') return panePid;
   } catch {
@@ -647,12 +655,13 @@ function getTmuxClaudePid(sessionName) {
   }
 
   try {
-    const out = execSync(`pgrep -P ${panePid} -f "claude" | head -1`, {
+    const out = execFileSync('pgrep', ['-P', String(panePid), '-f', 'claude'], {
       encoding: 'utf8',
-      timeout: 3000
-    }).trim();
-    const childPid = Number.parseInt(out, 10);
-    return Number.isInteger(childPid) && childPid > 0 ? childPid : 0;
+      stdio: ['ignore', 'pipe', 'ignore'],
+      timeout: 3000,
+      shell: false
+    });
+    return parseFirstPid(out);
   } catch {
     return 0;
   }
