@@ -1,0 +1,49 @@
+[Unit]
+Description=HXA M1 dedicated Codex task worker
+Documentation=https://learn.chatgpt.com/docs/non-interactive-mode
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=exec
+User=pilot-real-worker
+Group=pilot-real-worker
+WorkingDirectory=/opt/hxa-codex-worker/current
+EnvironmentFile=/etc/hxa-codex-worker/codex-worker.env
+Environment=HOME=/var/lib/hxa-codex-worker
+Environment=PATH=/opt/hxa-codex-worker/node/bin:/opt/hxa-codex-worker/codex/bin:/usr/local/bin:/usr/bin:/bin
+LoadCredential=hxa_task_token:/etc/hxa-codex-worker/hxa-task-token
+Environment=HXA_TASK_TOKEN_FILE=%d/hxa_task_token
+ExecStartPre=/opt/hxa-codex-worker/node/bin/node /opt/hxa-codex-worker/current/scripts/codex-worker.mjs --check
+ExecStart=/opt/hxa-codex-worker/node/bin/node /opt/hxa-codex-worker/current/scripts/codex-worker.mjs --codex
+UMask=0077
+
+# A stop or an uncertain outcome requires inspection before another start.
+Restart=no
+SuccessExitStatus=130 143
+KillMode=control-group
+KillSignal=SIGTERM
+FinalKillSignal=SIGKILL
+SendSIGKILL=yes
+TimeoutStopSec=40s
+
+CPUQuota=100%
+MemoryMax=1G
+MemorySwapMax=0
+TasksMax=192
+NoNewPrivileges=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/data/hxa-agent-m1-worker /var/lib/hxa-codex-worker
+
+# Do not add MemoryDenyWriteExecute or RestrictNamespaces without validating
+# Node's JIT and the pinned Codex sandbox under the same unit restrictions.
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=hxa-codex-worker
+
+[Install]
+WantedBy=multi-user.target

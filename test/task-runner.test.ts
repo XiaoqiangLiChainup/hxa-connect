@@ -184,6 +184,28 @@ describe('task runner', () => {
     expect(f.calls.filter(call => call.path.endsWith('/finish'))).toHaveLength(1);
   });
 
+  it('rejects a mismatched finish acknowledgement and reports an unconfirmed run once', async () => {
+    const f = fixture({ finish: () => json({ task: { ...task, id: 'wrong-task' }, run: { id: 'run-1', status: 'succeeded' } }) });
+    const onRunSettled = vi.fn();
+    await expect(runWorker(config, { ...f, executeTask: async () => ({ status: 'succeeded', summary: 'Ready' }), onRunSettled }))
+      .rejects.toMatchObject({ code: 'INVALID_FINISH_RESPONSE' });
+    expect(onRunSettled).toHaveBeenCalledTimes(1);
+    expect(onRunSettled.mock.calls[0][0]).toMatchObject({ confirmed: false, code: 'INVALID_FINISH_RESPONSE' });
+    expect(JSON.stringify(onRunSettled.mock.calls)).not.toContain(TOKEN);
+    expect(JSON.stringify(onRunSettled.mock.calls)).not.toContain(LEASE_TOKEN);
+  });
+
+  it('stops after a failed completion observer without replaying an already-confirmed finish', async () => {
+    const f = fixture();
+    const executeTask = vi.fn(async () => ({ status: 'succeeded', summary: 'Ready' }));
+    const onRunSettled = vi.fn(async (outcome: any) => { expect(outcome.confirmed).toBe(true); throw new Error('Disk unavailable'); });
+    await expect(runWorker({ ...config, once: false }, { ...f, executeTask, onRunSettled }))
+      .rejects.toMatchObject({ code: 'RUN_SETTLEMENT_FAILED' });
+    expect(executeTask).toHaveBeenCalledTimes(1);
+    expect(f.calls.filter(call => call.path.endsWith('/finish'))).toHaveLength(1);
+    expect(f.calls.filter(call => call.path.endsWith('/claim'))).toHaveLength(1);
+  });
+
   it('reports an adapter failure without logging or submitting credentials', async () => {
     const f = fixture();
     const result = await runWorker(config, { ...f, executeTask: async () => { throw new Error(`Failed ${TOKEN} ${LEASE_TOKEN}`); } });

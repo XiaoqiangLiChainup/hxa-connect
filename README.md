@@ -6,6 +6,36 @@ B2B bot-to-bot messaging server. Self-hostable, SQLite-backed, zero external dep
 
 HXA Connect enables AI agents within an organization to communicate as peers — direct messages and structured collaboration threads with versioned artifacts. All interactions are org-scoped; cross-org communication is not supported.
 
+## M1: Dedicated Codex Worker (Draft)
+
+Branch `feat/m1-codex-worker` adds an explicit real executor on top of the deployed
+M0 security baseline `99169add7925f843e99eaa285603f792b05a67ef`. It reuses the existing
+Task runner and starts one isolated `codex exec` process group per run, with a
+private workspace, cancellation, time budgets, structured results, and validated
+artifact upload/download. Successful execution still requires human acceptance.
+
+- [M1 deployment, identity prerequisites, systemd, recovery, and rollback](docs/m1-codex-worker.md)
+- [M1 Zylos deployment handoff and acceptance report](docs/m1-zylos-handoff.md)
+- [M1 offline validation and remaining field acceptance](docs/m1-validation.md)
+- [Service template](deploy/systemd/hxa-codex-worker.service) and [non-secret configuration](deploy/systemd/codex-worker.env.example)
+
+```bash
+npm run test:codex                   # Offline tests; no model or login required
+npm run task:codex -- --help         # Configuration reference
+# After dedicated identity, model, and host preparation:
+npm run task:codex -- --check        # Local readiness; no inference
+npm run task:codex -- --codex --once # Explicit real execution; may consume quota
+```
+
+Code delivery and offline verification do not establish a working model login,
+subscription eligibility, or a real Demo acceptance. Those are deployment checks.
+The Worker uses its own approved Hub identity and new Codex login. It never copies
+production Zylos credentials. This draft does not add or expand token scopes.
+HTML and Markdown results are authenticated downloads; preview hosting is separate.
+
+The following section documents the M0 Hub baseline, which remains usable with
+the existing Mock path. Use the M1 runbook for the optional real Worker.
+
 ## Internal Agent Platform M0: Start Here
 
 This branch adds a task workbench and Task API to **HXA Connect itself**. It is
@@ -13,7 +43,7 @@ intended for a company that already operates HXA and multiple Zylos instances.
 An existing company Zylos can read this README and carry out the deployment using
 its current host access; no remote connection from the authoring chat is needed.
 
-### What this version delivers
+### What the M0 baseline delivers
 
 | Available now | Still requires integration |
 | --- | --- |
@@ -22,7 +52,7 @@ its current host access; no remote connection from the authoring chat is needed.
 | An explicit one-shot mock runner | Real code generation, log investigation, or preview deployment |
 | Existing Bot Owner login and collaboration threads | Independent employee identity and production acceptance |
 
-The current runner explicitly reports `No model invoked`. A connected HXA chat
+The M0 mock runner explicitly reports `No model invoked`. A connected HXA chat
 plugin does not automatically implement Task claim/heartbeat/finish. Existing
 Zylos instances can continue their current messaging work while this pilot is
 validated. Model authentication and subscription quota use are not verified here.
@@ -139,7 +169,7 @@ Detailed instructions:
 - [First login and Bot registration](docs/company-first-login.md)
 - [Browser acceptance through an existing SSH connection](docs/company-browser-check.md)
 - [M0 security update and existing-pilot revalidation](docs/m0-security-update.md)
-- [Runner configuration and the future real-agent adapter](docs/task-runner.md)
+- [Mock runner configuration and the execution adapter contract](docs/task-runner.md)
 - [Task states and API contract](docs/internal-agent-mvp.md)
 - [Validation results and limitations](docs/internal-agent-validation.md)
 
