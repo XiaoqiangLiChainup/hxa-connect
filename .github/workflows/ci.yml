@@ -2,7 +2,7 @@ name: CI
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, fix/m0-security-hardening]
 
 permissions:
   contents: read
@@ -25,6 +25,9 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Verify pinned Zylos task source and reversible patch
+        run: npm run check:zylos-source
 
       - name: Test
         run: npm test

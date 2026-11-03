@@ -236,7 +236,7 @@ async function executeClaim(claim, config, dependencies) {
   if (!task || typeof task.id !== 'string' || !run || typeof run.id !== 'string' || typeof leaseToken !== 'string' || !leaseToken) {
     throw new RunnerError('Claim response is incomplete; no task was executed.', { code: 'INVALID_CLAIM_RESPONSE' });
   }
-  const { client, signal, executeTask, log, secrets, now } = dependencies;
+  const { client, signal, executeTask, onRunSettled, log, secrets, now } = dependencies;
   secrets.add(leaseToken);
   const lease = new LeaseGuard(run.lease_expires_at, signal, now);
   const heartbeatStop = new AbortController();
@@ -259,6 +259,8 @@ async function executeClaim(claim, config, dependencies) {
     }
   })();
 
+  let confirmedResult;
+  let stoppedCode;
   try {
     lease.assertActive();
     log('task_started', { task_id: task.id, run_id: run.id });
@@ -285,13 +287,15 @@ async function executeClaim(claim, config, dependencies) {
     const response = await client.request(`${runPath}/finish`, serializedPayload, {
       signal: lease.signal, lease, retry: true, operation: 'finish',
     });
-    if (!response?.task || !response?.run) {
+    if (response?.task?.id !== task.id || response?.run?.id !== run.id || response.run.status !== payload.status) {
       throw new RunnerError('Finish response is incomplete; inspect the task before retrying work.', { code: 'INVALID_FINISH_RESPONSE' });
     }
+    confirmedResult = { task: response.task, run: response.run, status: payload.status };
     log('task_finished', { task_id: task.id, run_id: run.id, status: payload.status });
-    return { task: response.task, run: response.run, status: payload.status };
+    return confirmedResult;
   } catch (error) {
     lease.abort(error);
+    stoppedCode = error instanceof RunnerError ? error.code : 'RUNNER_ERROR';
     log('task_stopped', { task_id: task.id, run_id: run.id, code: error instanceof RunnerError ? error.code : 'RUNNER_ERROR' });
     throw error;
   } finally {
@@ -299,6 +303,18 @@ async function executeClaim(claim, config, dependencies) {
     await heartbeat;
     lease.close();
     secrets.delete(leaseToken);
+    if (onRunSettled) {
+      try {
+        // No credential or lease token is exposed to lifecycle observers.
+        // Real adapters use this hook to await cleanup and persist finish evidence.
+        await onRunSettled({
+          task, run, confirmed: Boolean(confirmedResult),
+          status: confirmedResult?.status, code: stoppedCode,
+        });
+      } catch {
+        throw new RunnerError('Unable to record run completion or confirm executor cleanup; inspect before restarting.', { code: 'RUN_SETTLEMENT_FAILED' });
+      }
+    }
   }
 }
 
@@ -309,12 +325,16 @@ async function executeClaim(claim, config, dependencies) {
  */
 export async function runWorker(configuration, {
   executeTask,
+  onRunSettled,
+  beforeClaim,
   signal,
   fetchImpl = globalThis.fetch,
   logger = entry => console.log(JSON.stringify(entry)),
   now = Date.now,
 } = {}) {
   if (typeof executeTask !== 'function') throw new ConfigurationError('An explicit executeTask adapter is required.');
+  if (onRunSettled !== undefined && typeof onRunSettled !== 'function') throw new ConfigurationError('onRunSettled must be a function when provided.');
+  if (beforeClaim !== undefined && typeof beforeClaim !== 'function') throw new ConfigurationError('beforeClaim must be a function when provided.');
   if (!configuration?.token || !configuration?.runnerId) throw new ConfigurationError('A bot token and runner ID are required.');
   const config = { ...DEFAULTS, ...configuration, url: normalizeBaseUrl(configuration.url) };
   const secrets = new Set([config.token]);
@@ -324,13 +344,17 @@ export async function runWorker(configuration, {
   log('runner_started', { runner_id: config.runnerId, once: Boolean(config.once) });
   try {
     while (!signal?.aborted) {
+      // Optional local admission checks run before any claim side effect. No
+      // bearer/lease token or Task data is exposed, and the default is unchanged.
+      if (beforeClaim) await beforeClaim({ signal });
+      if (signal?.aborted) break;
       const claim = await client.claim(config.runnerId, signal);
       if (!claim || !Object.hasOwn(claim, 'task')) {
         throw new RunnerError('Claim response has no task field; no task was executed.', { code: 'INVALID_CLAIM_RESPONSE' });
       }
       if (claim.task !== null) {
         stats.claimed++;
-        const result = await executeClaim(claim, config, { client, signal, executeTask, log, secrets, now });
+        const result = await executeClaim(claim, config, { client, signal, executeTask, onRunSettled, log, secrets, now });
         stats[result.status]++;
         stats.lastResult = result;
       } else {

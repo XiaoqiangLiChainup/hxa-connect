@@ -1,5 +1,10 @@
 # Local task runner (M0)
 
+The original CLI below remains Mock-only. The optional M1 real executor has a
+separate explicit CLI, `scripts/codex-worker.mjs --codex`, and reuses `runWorker()`.
+See [M1 deployment and execution](m1-codex-worker.md). Removing `--mock` from the
+original CLI does not select a real model.
+
 The runner claims work from the task API, renews its execution lease, invokes an
 explicit execution adapter, and submits a result. This increment includes only a
 **mock adapter**. It does not install Zylos, sign in to Codex, call a model, run a
@@ -121,7 +126,7 @@ created. It accepts no external URL or data directory and does not read
 or change your normal Hub's data. A server build and the repository's existing
 dependencies are required; the demo does not install them.
 
-## Implementing a real execution adapter later
+## Execution adapter contract
 
 The independent API is exported from `scripts/task-runner.mjs`:
 
@@ -162,9 +167,18 @@ idempotency, fence writes when possible, and register process cancellation befor
 starting work. JavaScript cannot forcibly stop an adapter that ignores its abort
 signal; the runner will fence its result, but the adapter must stop its own effects.
 
-Real model authentication, quota accounting, workspace isolation, and preview
-hosting remain separate integration work. Selecting this adapter does not imply
-that a subscription can be shared by a company platform.
+The generic runner delegates model authentication, quota accounting, workspace
+isolation, and artifact delivery to its adapter and deployment. M1 implements the
+Codex process/workspace and download path; model eligibility and real acceptance
+are still deployment checks. Selecting an adapter does not imply that a
+subscription can be shared by a company platform. Preview hosting is separate.
+
+An optional `onRunSettled({ task, run, confirmed, status, code })` observer is
+awaited exactly once after a claimed execution settles. It receives no lease or
+bearer token. The M1 executor uses it to join process cleanup and record the Hub's
+finish acknowledgement. Observer failure stops the worker without replaying work;
+it cannot undo a finish the Hub already accepted. Confirmed finish responses must
+match the claimed task/run IDs and submitted run status.
 
 ## Focused verification
 

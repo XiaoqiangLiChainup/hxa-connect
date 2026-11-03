@@ -44,7 +44,7 @@ RUN apk add --no-cache --virtual .native-build-deps python3 make g++ && \
 
 COPY --from=builder /app/dist ./dist
 COPY --from=web-builder /app/web-next/out ./web-next/out
-COPY scripts/task-runner.mjs scripts/demo-tasks.mjs ./scripts/
+COPY scripts/cli-entrypoint.mjs scripts/task-runner.mjs scripts/demo-tasks.mjs ./scripts/
 COPY scripts/task-runner/ ./scripts/task-runner/
 
 # Data volume (writable by hxa user)

@@ -13,6 +13,13 @@
     "build:web": "cd web-next && npm install && npx next build",
     "test": "vitest run",
     "task:runner": "node scripts/task-runner.mjs",
+    "task:codex": "node scripts/codex-worker.mjs",
+    "task:zylos": "node scripts/zylos-worker.mjs",
+    "check:zylos-source": "node scripts/build-zylos-task-source.mjs --check",
+    "test:codex": "vitest run test/codex-*.test.ts",
+    "test:m1": "vitest run test/codex-*.test.ts test/zylos-*.test.ts test/m1-*.test.ts",
+    "check:zylos": "node scripts/zylos-task-check.mjs",
+    "check:m1-window": "node scripts/m1-window-check.mjs",
     "demo:tasks": "node scripts/demo-tasks.mjs"
   },
   "keywords": [

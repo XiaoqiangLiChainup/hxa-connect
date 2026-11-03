@@ -4121,7 +4121,11 @@ export function createRouter(db: HubDB, ws: HubWS, config: HubConfig, sessionSto
     res.setHeader('Content-Length', record.size);
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Content-Security-Policy', "default-src 'none'");
-    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    // Downloads require an organization identity, including task artifact links.
+    // Shared caches must never turn an authenticated file into a public response.
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.vary('Cookie');
+    res.vary('Authorization');
 
     const stream = fs.createReadStream(diskPath);
     stream.on('error', (err) => {

@@ -4,7 +4,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { mkdtemp, mkdir, rm, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { isMainModule } from './cli-entrypoint.mjs';
 import { runWorker, createMockExecutor, ShutdownError } from './task-runner/worker.mjs';
 
 class DemoError extends Error {}
@@ -193,7 +193,7 @@ async function main(args) {
   }
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+if (isMainModule(import.meta)) {
   try { await main(process.argv.slice(2)); } catch (error) {
     console.error(error instanceof DemoError || error instanceof ShutdownError
       ? error.message

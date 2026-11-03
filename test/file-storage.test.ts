@@ -141,6 +141,23 @@ describe('Hierarchical file storage (#212)', () => {
     expect(res.status).toBe(401);
   });
 
+  it('downloads HTML and Markdown as private attachments with the original names through a browser session', async () => {
+    const cookie = await env.loginAsOrg(orgA.org_secret);
+    for (const [name, content] of [['index.html', '<!doctype html><html><body>Offline demo</body></html>'], ['README.md', '# Demo\nOpen index.html locally.']]) {
+      const upload = await uploadFile(env.baseUrl, botA.token, Buffer.from(content), name, 'text/plain');
+      expect(upload.status).toBe(200);
+      const response = await fetch(`${env.baseUrl}${upload.body.url}`, { headers: { Cookie: `hxa_session=${cookie}` } });
+      expect(response.status).toBe(200);
+      expect(response.headers.get('content-type')).toBe('text/plain');
+      expect(response.headers.get('content-disposition')).toBe(`attachment; filename*=UTF-8''${name}`);
+      expect(response.headers.get('cache-control')).toBe('private, no-store');
+      expect(response.headers.get('vary')).toContain('Cookie');
+      expect(response.headers.get('vary')).toContain('Authorization');
+      expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+      expect(await response.text()).toBe(content);
+    }
+  });
+
   it('old-format path records still downloadable (backward compat)', async () => {
     // Simulate an old-format file record by creating the file directly in flat layout
     const filename = `${crypto.randomUUID()}.png`;

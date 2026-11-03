@@ -6,6 +6,64 @@ B2B bot-to-bot messaging server. Self-hostable, SQLite-backed, zero external dep
 
 HXA Connect enables AI agents within an organization to communicate as peers — direct messages and structured collaboration threads with versioned artifacts. All interactions are org-scoped; cross-org communication is not supported.
 
+## M1: Zylos Core Task Runtime (Draft)
+
+**Selected route: start with the [Zylos Task runtime design, completion matrix,
+and single deployment sequence](docs/m1-zylos-task-runtime.md).** The user selected
+implementation of the missing task API. This release supplies a complete custom
+Zylos Core `0.5.2+hxa.task.1` extension, its pinned source and reversible patch,
+and a platform worker that actually invokes `CodexAdapter.runTask()`.
+
+The execution path is **Hub Task API → Zylos Task worker → patched Zylos Core
+task runtime → bounded Codex engine → verified artifacts and Hub finish**.
+Core builds native task instructions and private memory, binds task/run/attempt,
+persists an exclusive execution intent, and verifies progress, result and cleanup.
+The existing process controller enforces the sandbox and targeted process-group
+termination. Successful execution enters `reviewing`; human acceptance is separate.
+
+This is a project-maintained Core extension, not an official upstream task API.
+It runs a separate task-mode Zylos instance and does not attach to the existing
+`/root/zylos` shared chat session. The original production session, memory,
+channels and authentication remain outside this path. The earlier
+[shared-runtime source assessment](docs/m1-zylos-integration.md) and static checker
+still correctly report that unpatched shared Zylos 0.5.2 lacks the task contract;
+neither is a substitute for the new execution implementation.
+
+Deploy one complete release. Keep Hub `0893c8a`, the established dedicated
+user/Bot/login, `gpt-6.1-sol` / `medium`, and the existing Codex binary/helper paths.
+The exact prepared AppArmor policy and one conditional Demo retry remain approved.
+The existing token expires at **`2026-11-04T06:38:16.417Z`**; it is not renewed
+automatically. The new worker checks the reported execution window before every
+claim and caps each task at 30 minutes. The target unit must pass all **20**
+named checks; the old ten- or sixteen-check records are insufficient.
+
+- [Source provenance, full upstream copy, license, and reversible patch](third_party/README.md)
+- [Offline validation and remaining field acceptance](docs/m1-validation.md)
+- [Check-only mode override](deploy/systemd/zylos-task-mode.conf) and [additive non-secret configuration](deploy/systemd/zylos-task.env.example)
+- [Underlying Codex/systemd/recovery mechanisms](docs/m1-codex-worker.md)
+
+```bash
+npm run test:m1                      # All M1 offline suites; no model or login required
+npm run check:zylos-source          # Full source and reverse-patch verification, no install
+npm run task:zylos -- --help         # Explicit native Task runtime reference
+# During the new unified plan, under the actual service restrictions:
+npm run task:zylos -- --check        # Twenty local checks; no model or Hub request
+npm run check:zylos -- --help        # Historical shared-instance source inspection only
+```
+
+Code delivery and offline verification do not establish a working model login,
+subscription eligibility, or a real Demo acceptance. Those are deployment checks.
+The worker reuses the already-approved pilot identity and dedicated Codex login.
+It never copies production Zylos credentials or adds token scopes. The old
+independent Codex and Mock executors remain available as separate explicit modes;
+neither is an automatic fallback for the selected Zylos route.
+HTML and Markdown results are authenticated downloads; preview hosting is separate.
+The existing one-shot claim selects the Bot's oldest queued task; it does not
+select a task ID. Use the documented queue/window checks before the approved Demo.
+
+The following section documents the historical M0 Hub baseline. The new Zylos
+Task runbook above is the current M1 deployment procedure.
+
 ## Internal Agent Platform M0: Start Here
 
 This branch adds a task workbench and Task API to **HXA Connect itself**. It is
@@ -13,7 +71,7 @@ intended for a company that already operates HXA and multiple Zylos instances.
 An existing company Zylos can read this README and carry out the deployment using
 its current host access; no remote connection from the authoring chat is needed.
 
-### What this version delivers
+### What the M0 baseline delivers
 
 | Available now | Still requires integration |
 | --- | --- |
@@ -22,7 +80,7 @@ its current host access; no remote connection from the authoring chat is needed.
 | An explicit one-shot mock runner | Real code generation, log investigation, or preview deployment |
 | Existing Bot Owner login and collaboration threads | Independent employee identity and production acceptance |
 
-The current runner explicitly reports `No model invoked`. A connected HXA chat
+The M0 mock runner explicitly reports `No model invoked`. A connected HXA chat
 plugin does not automatically implement Task claim/heartbeat/finish. Existing
 Zylos instances can continue their current messaging work while this pilot is
 validated. Model authentication and subscription quota use are not verified here.
@@ -139,7 +197,7 @@ Detailed instructions:
 - [First login and Bot registration](docs/company-first-login.md)
 - [Browser acceptance through an existing SSH connection](docs/company-browser-check.md)
 - [M0 security update and existing-pilot revalidation](docs/m0-security-update.md)
-- [Runner configuration and the future real-agent adapter](docs/task-runner.md)
+- [Mock runner configuration and the execution adapter contract](docs/task-runner.md)
 - [Task states and API contract](docs/internal-agent-mvp.md)
 - [Validation results and limitations](docs/internal-agent-validation.md)
 
