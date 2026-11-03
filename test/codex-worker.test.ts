@@ -304,7 +304,9 @@ describe('offline real-adapter integration with a temporary Hub', () => {
     const task = await f.create();
     const stateRoot = path.join(temporary, 'cli-state');
     fs.mkdirSync(stateRoot, { mode: 0o700 });
-    const tokenFile = path.join(temporary, 'cli-token');
+    const credentialDir = path.join(temporary, 'cli-credentials');
+    fs.mkdirSync(credentialDir, { mode: 0o700 });
+    const tokenFile = path.join(credentialDir, 'cli-token');
     fs.writeFileSync(tokenFile, `${f.worker.token}\n`, { mode: 0o600 });
     const originalFetch = globalThis.fetch;
     let claims = 0;

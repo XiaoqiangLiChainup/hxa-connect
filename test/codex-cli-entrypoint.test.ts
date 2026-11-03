@@ -73,7 +73,7 @@ describe('real CLI subprocess entrypoints, without credentials or model calls', 
     for (const directory of [state, home, codexHome]) fs.mkdirSync(directory, { mode: 0o700 });
     const result = runNode([cliPath('codex-worker.mjs', 'directory link'), '--check'], temporary, {
       HXA_TASK_URL: 'http://127.0.0.1:4801',
-      HXA_TASK_TOKEN_FILE: path.join(temporary, 'absent-token'),
+      HXA_TASK_TOKEN_FILE: path.join(temporary, 'credentials', 'absent-token'),
       HXA_ARTIFACT_PUBLIC_BASE_URL: 'https://agents.example.test',
       HXA_RUNNER_ID: 'offline-entrypoint-test', HXA_CODEX_STATE_DIR: state,
       HXA_CODEX_BIN: path.join(temporary, 'absent-codex'),
@@ -84,11 +84,11 @@ describe('real CLI subprocess entrypoints, without credentials or model calls', 
     expect(result.stderr).toBe('');
     const readiness = JSON.parse(result.stdout);
     expect(readiness).toMatchObject({ ready: false, codex_version_required: '0.166.0', model: 'offline-model-fixture' });
-    expect(readiness.checks).toHaveLength(10);
+    expect(readiness.checks).toHaveLength(16);
     for (const name of ['hub_token_file', 'trusted_codex_executable', 'codex_0_166_0', 'dedicated_chatgpt_login_configured']) {
       expect(readiness.checks).toContainEqual({ name, passed: false });
     }
-    expect(fs.existsSync(path.join(temporary, 'absent-token'))).toBe(false);
+    expect(fs.existsSync(path.join(temporary, 'credentials', 'absent-token'))).toBe(false);
     expect(fs.readdirSync(state)).toEqual([]);
     expect(fs.readdirSync(codexHome)).toEqual([]);
   });

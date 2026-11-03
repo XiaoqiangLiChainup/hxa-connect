@@ -5,6 +5,20 @@ import { fileURLToPath } from 'node:url';
 
 // This executable is an offline process fixture, never a Codex/model invocation.
 const args = process.argv.slice(2);
+if (args.includes('app-server') && args.includes('--print-startup-config')) {
+  // Model-free fixture for the native managed-policy preview before exec.
+  const markerFile = path.join(process.cwd(), '.fixture-policy-preview');
+  const mode = fs.existsSync(markerFile) ? fs.readFileSync(markerFile, 'utf8') : 'allowed';
+  fs.writeFileSync(path.join(process.cwd(), 'policy-preview-observed.json'), JSON.stringify({ argv: args }));
+  if (mode === 'malformed') process.stdout.write('{');
+  else process.stdout.write(JSON.stringify({ appServerVersion: '0.166.0', configRequirements: {
+    supportsIndependentSpeedModes: true,
+    requirements: mode === 'rejected' ? {
+      allowedPermissionProfiles: { ':workspace': true }, defaultPermissions: ':workspace', allowedSandboxModes: null,
+    } : null,
+  } }) + '\n');
+  process.exit(0);
+}
 const outputFile = args[args.indexOf('--output-last-message') + 1];
 const schemaFile = args[args.indexOf('--output-schema') + 1];
 let prompt = '';

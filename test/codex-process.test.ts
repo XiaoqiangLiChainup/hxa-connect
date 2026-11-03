@@ -6,6 +6,8 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { runCodexProcess, CodexExecutionError } from '../scripts/codex-runner/process.mjs';
 import { validateCodexResult, RESULT_SCHEMA } from '../scripts/codex-runner/schema.mjs';
+import { createSandboxProfileName, sandboxPolicyArguments } from '../scripts/codex-runner/sandbox-policy.mjs';
+import * as policyCheck from '../scripts/codex-runner/sandbox-policy-check.mjs';
 
 const fixtureModule = fileURLToPath(new URL('./fixtures/codex-process-main.mjs', import.meta.url));
 const childModule = fileURLToPath(new URL('./fixtures/codex-process-child.mjs', import.meta.url));
@@ -47,7 +49,7 @@ function execute(mode = 'success', overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   root = fs.mkdtempSync(path.join(os.tmpdir(), 'hxa-codex-process-'));
   const dirs: Record<string, string> = {};
-  for (const name of ['workspace', 'control', 'logs', 'home', 'codex-home', 'bin']) {
+  for (const name of ['workspace', 'control', 'logs', 'home', 'codex-home', 'credentials', 'bin']) {
     dirs[name] = path.join(root, name);
     fs.mkdirSync(dirs[name], { mode: 0o700 });
   }
@@ -56,7 +58,8 @@ beforeEach(() => {
   base = {
     task, run, workspaceDir: dirs.workspace, controlDir: dirs.control, logsDir: dirs.logs,
     config: {
-      codexBin, codexHome: dirs['codex-home'], homeDir: dirs.home,
+      codexBin, codexHome: dirs['codex-home'], homeDir: dirs.home, stateRoot: root, credentialDir: dirs.credentials,
+      sandboxProfile: createSandboxProfileName(),
       childPath: '/usr/local/bin:/usr/bin:/bin', model: 'pinned-offline-fixture', reasoningEffort: 'medium',
       profile: 'feedback-demo', timeoutMs: 3_000, termGraceMs: 100,
     },
@@ -97,7 +100,8 @@ describe('offline Codex process controller', () => {
     expect(response.metadata).toMatchObject({ exitCode: 0, exitSignal: null, cleanupComplete: true, pipesClosed: true });
     const observed = JSON.parse(fs.readFileSync(path.join(base.workspaceDir, 'observed.json'), 'utf8'));
     expect(observed.argv).toEqual([
-      '--no-daemon', '--ask-for-approval', 'never', '--sandbox', 'workspace-write',
+      '--no-daemon', '--ask-for-approval', 'never',
+      ...sandboxPolicyArguments(base.config), '-c', `default_permissions=${JSON.stringify(base.config.sandboxProfile)}`,
       '-C', base.workspaceDir, '--model', base.config.model, '-c', 'model_reasoning_effort="medium"',
       'exec', '--json', '--ephemeral', '--ignore-user-config', '--skip-git-repo-check',
       '--output-schema', path.join(base.controlDir, 'schema.json'),
@@ -129,6 +133,29 @@ describe('offline Codex process controller', () => {
     expect(logs).toContain('unknown');
     expect(logs).toContain('rawContentStored');
     expect(metadata.stderrBytes).toBeGreaterThan(0);
+  });
+
+  it.each(['rejected', 'malformed'])('stops before exec when native managed-policy preview is %s', async mode => {
+    fs.writeFileSync(path.join(base.workspaceDir, '.fixture-policy-preview'), mode);
+    const error = await execute().catch(error => error);
+    expect(error.code).toBe(mode === 'rejected' ? 'CODEX_SANDBOX_POLICY_REJECTED' : 'CODEX_SANDBOX_POLICY_RESPONSE');
+    expect(error.metadata).toMatchObject({ cleanupComplete: true, pid: null, exitCode: null });
+    expect(fs.existsSync(path.join(base.workspaceDir, 'policy-preview-observed.json'))).toBe(true);
+    expect(fs.existsSync(path.join(base.workspaceDir, 'observed.json'))).toBe(false);
+    expect(fs.existsSync(path.join(base.workspaceDir, 'index.html'))).toBe(false);
+  });
+
+  it('preserves uncertain preview cleanup when exec was never spawned', async () => {
+    vi.spyOn(policyCheck, 'verifyRuntimeSandboxPolicy').mockRejectedValue(
+      new policyCheck.SandboxPolicyError('CODEX_SANDBOX_POLICY_CLEANUP', { cleanupComplete: false }),
+    );
+    const error = await execute().catch(error => error);
+    expect(error.code).toBe('CODEX_SANDBOX_POLICY_CLEANUP');
+    expect(error.metadata).toMatchObject({ cleanupComplete: false, pid: null, exitCode: null });
+    expect(fs.existsSync(path.join(base.workspaceDir, 'observed.json'))).toBe(false);
+    // No model PID was created; the adapter retains this failed cleanup in its
+    // attempt journal and lock rather than inventing a model process identity.
+    expect(fs.existsSync(path.join(base.controlDir, 'process.json'))).toBe(false);
   });
 
   it('returns a declared failed result without inventing model success', async () => {

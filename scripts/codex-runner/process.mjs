@@ -3,6 +3,8 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { RESULT_SCHEMA, validateCodexResult } from './schema.mjs';
+import { sandboxPolicyArguments } from './sandbox-policy.mjs';
+import { SandboxPolicyError, verifyRuntimeSandboxPolicy } from './sandbox-policy-check.mjs';
 
 const DEFAULTS = Object.freeze({
   timeoutMs: 1_800_000, termGraceMs: 10_000,
@@ -67,6 +69,8 @@ function validateConfiguration(configuration) {
   config.codexBin = absolute(config.codexBin, 'Codex binary');
   config.codexHome = existingDirectory(config.codexHome, 'Codex home');
   config.homeDir = existingDirectory(config.homeDir, 'Dedicated home');
+  config.credentialDir = existingDirectory(config.credentialDir, 'Credential directory');
+  config.stateRoot = existingDirectory(config.stateRoot, 'Worker state');
   if (typeof config.childPath !== 'string' || !config.childPath
     || config.childPath.split(':').some(entry => !path.isAbsolute(entry) || /[\u0000\r\n]/u.test(entry))) {
     throw new CodexExecutionError('CODEX_CONFIG_INVALID', 'The child PATH must contain only explicit absolute directories.');
@@ -369,7 +373,8 @@ export async function runCodexProcess({ task, run, workspaceDir, controlDir, log
     logsDir = existingDirectory(logsDir, 'Logs directory');
     if (within(controlDir, workspaceDir) || within(logsDir, workspaceDir)
       || within(workspaceDir, controlDir) || within(workspaceDir, logsDir)
-      || controlDir === logsDir || within(config.codexHome, workspaceDir) || within(config.homeDir, workspaceDir)) {
+      || controlDir === logsDir || !within(workspaceDir, config.stateRoot)
+      || [config.codexHome, config.homeDir, config.credentialDir].some(directory => within(directory, workspaceDir) || within(workspaceDir, directory))) {
       throw new CodexExecutionError('CODEX_CONFIG_INVALID', 'Workspace, credentials, control files, and logs must be separated.');
     }
     prompt = makePrompt(task, run, config.profile);
@@ -400,7 +405,7 @@ export async function runCodexProcess({ task, run, workspaceDir, controlDir, log
   const exited = deferred();
   const closed = deferred();
   const stopped = deferred();
-  let child, leader, timeout, stopReason = null, spawnFailed = false, cleanupAttempted = false;
+  let child, leader, timeout, stopReason = null, spawnFailed = false, cleanupAttempted = false, policyCleanupUncertain = false;
   let stdoutEnded = false, decoderFinished = false, textBuffer = '', eventLogBytes = 0;
   const decoder = new TextDecoder('utf-8', { fatal: true });
   const requestStop = reason => {
@@ -409,7 +414,7 @@ export async function runCodexProcess({ task, run, workspaceDir, controlDir, log
   const onAbort = () => requestStop(ABORTED());
   const cleanAndDrain = async () => {
     cleanupAttempted = true;
-    try { metadata.cleanupComplete = leader ? await cleanProcessGroup(leader, config, metadata) : spawnFailed || !child?.pid; }
+    try { metadata.cleanupComplete = !policyCleanupUncertain && (leader ? await cleanProcessGroup(leader, config, metadata) : spawnFailed || !child?.pid); }
     catch (error) {
       metadata.controlErrorCode = safeErrorCode(error);
       metadata.cleanupComplete = false;
@@ -476,8 +481,17 @@ export async function runCodexProcess({ task, run, workspaceDir, controlDir, log
   try {
     if (signal?.aborted) requestStop(ABORTED());
     if (stopReason) throw new CodexExecutionError(stopReason.code, stopReason.message, metadata);
+    try {
+      await verifyRuntimeSandboxPolicy(config, { workspaceDir, signal });
+    } catch (error) {
+      policyCleanupUncertain = error?.metadata?.cleanupComplete !== true;
+      if (error instanceof SandboxPolicyError) throw new CodexExecutionError(error.code, error.message, metadata);
+      throw error;
+    }
+    if (signal?.aborted) throw new CodexExecutionError(ABORTED().code, ABORTED().message, metadata);
     const args = [
-      '--no-daemon', '--ask-for-approval', 'never', '--sandbox', 'workspace-write',
+      '--no-daemon', '--ask-for-approval', 'never',
+      ...sandboxPolicyArguments(config), '-c', `default_permissions=${JSON.stringify(config.sandboxProfile)}`,
       '-C', workspaceDir, '--model', config.model, '-c', `model_reasoning_effort=${JSON.stringify(config.reasoningEffort)}`,
       'exec', '--json', '--ephemeral', '--ignore-user-config', '--skip-git-repo-check',
       '--output-schema', schemaPath, '--output-last-message', resultPath, '-',

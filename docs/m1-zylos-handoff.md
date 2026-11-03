@@ -4,7 +4,71 @@ Use the company's existing authorized channel. This is a deployment handoff for
 one dedicated Codex task worker, not a request to change Zylos itself. Follow
 [m1-codex-worker.md](m1-codex-worker.md) and the matching source commit.
 
-## Current direct-SSH patch: CLI entry after `0893c8a`
+## Current direct-SSH patch: sandbox readiness after worker `1544`
+
+Hub stays at `0893c8a`; update only the worker from the reported `1544` baseline.
+The first real Demo correctly failed during sandbox initialization. Its ten old
+preflight checks had passed, which exposed a readiness gap, not a reason to
+replace the model, credentials, or identity. Preserve that failed attempt and
+its evidence. Do not retry it as part of this code update.
+
+The dedicated user, member Bot, approved 24-hour full-scope token, ChatGPT login,
+and `gpt-6.1-sol` / `medium` configuration already exist. Reuse them. Stage the
+complete worker release, retaining the CLI-entry fix below; stop/reconcile only
+the worker before switching `current`. No new user-supplied inventory, login,
+identity creation, Hub image, database, data, or TLS change is needed.
+
+Update the unit with the reviewed static canary line, preserving all restrictions:
+
+```ini
+SetCredential=hxa_sandbox_probe:non-secret-hxa-sandbox-canary-v1
+```
+
+This public test value does not change a token or grant host privileges. Keep the
+unit in `--check` mode. Require the actual current invocation's readiness JSON
+with all **16** check names in runbook section 5 present and boolean `passed: true`,
+as well as `ready: true`, version `0.166.0`, and the expected model. The six new
+checks exercise command startup, allowed workspace writes, denied external writes,
+denied protected-marker reads both directly and through workspace symlink aliases,
+denied connection to a local loopback witness, and cleanup.
+
+Only the new sandbox probe avoids real credential reads: it launches with new,
+empty temporary `HOME`/`CODEX_HOME`, creates/removes exclusive random markers in
+the real protected homes, and tests the non-secret systemd canary instead of the
+token. The full `--check` still includes local login-status and token-structure
+checks. Neither path calls a model or claims work. Probe and real execution share
+the stricter Codex permission profile `hxa_m1_<random hex>`, generated once per
+worker invocation to avoid lower-layer fixed-name configuration collisions; this is separate from a host
+AppArmor profile and the artifact profile `feedback-demo`.
+
+On a separately approved real attempt, the worker also runs the pinned CLI's
+startup-config preview before `codex exec`. This uses the existing dedicated
+Codex identity and may fetch managed configuration; it is not part of the local
+`--check` and does not submit a model request. An incompatible policy or an
+existing dedicated `CODEX_HOME/config.toml` stops execution for review, without
+changing company policy, credentials, or selecting a fallback. See runbook
+section 6. Do not run this preview manually as part of the current check-only patch.
+
+That policy makes the state root read-only for sandboxed commands and allows
+writes at the deeper current workspace. The `:workspace` baseline still allows `/tmp` and `TMPDIR`;
+`TMPDIR` is fixed to the workspace's `.tmp`. Do not claim that the whole machine
+has only one writable directory. The credential directory must not overlap the
+state root or real model homes in either direction, so a more specific write
+rule cannot reopen a protected ancestor. Do not move credentials or relax paths
+automatically if this validation fails.
+
+The reported Ubuntu 24.04 AppArmor restriction blocks the actual bundled helper.
+The deployment assistant has prepared a template-derived exact-helper policy and
+offline parsing passed, but it is **not installed or loaded**. Follow runbook
+section 5.2 to present its exact path/hash, Ubuntu template/ABI, unique parent and
+child names, transitions/includes, new allowance, and scoped rollback for explicit
+user approval. Only that concrete reviewed policy may be installed/loaded after
+approval. Do not disable host restrictions, expand unit permissions, or generate
+an automatic privilege-fix script.
+After an approved policy change, rerun all 16 local checks. A real task retry then
+requires its own explicit approval; a passing check does not authorize it.
+
+## Earlier direct-SSH patch: CLI entry after `0893c8a`
 
 Zylos has handed off to the direct-SSH deployment assistant. The dedicated user,
 member Bot, approved 24-hour full-scope token, and fresh ChatGPT login are already
@@ -13,24 +77,25 @@ settings. Do not recreate identities, log in again, extend token scope/lifetime,
 or repeat initial-install gates for this worker-only patch.
 
 The `0893c8a` CLI guard can return silent exit 0 through the `current` symlink.
-The already-authorized one-shot using its fixed real path can continue: do not
-interrupt the running task to apply this fix. After it finishes, stage the
-**whole new verified release**, including `scripts/cli-entrypoint.mjs`; stop and
-reconcile only the M1 worker before switching `current`.
+The earlier authorized one-shot could continue through its fixed real path; that
+authorization is not approval to retry the now-failed Demo. Retain the fix by
+staging the **whole new verified release**, including `scripts/cli-entrypoint.mjs`;
+stop and reconcile only the M1 worker before switching `current`.
 
 Require the new `current` path's actual `--help` Usage and actual `--check`
 readiness JSON. The JSON must have boolean `ready: true`,
 `codex_version_required: "0.166.0"`, the expected model `gpt-6.1-sol`, and a
-nonempty `checks` array with all ten names in runbook section 5 present and all
+nonempty `checks` array with all 16 names in runbook section 5 present and all
 entries boolean `passed: true`. Empty/malformed output, missing checks, an old
 journal record, or exit 0 alone is not accepted. Missing configuration may
 legitimately fail a model-free CI check; it does not establish host readiness.
 
 After validating the new symlink path, restore/remove only the recorded temporary
 mode override that pins the old real path. Preserve other drop-ins and the
-authorized `--codex --once` mode; do not accidentally enable resident polling by
-removing its mode selection. Reload and inspect the effective unit before
-continuing acceptance. No model, identity, permission, Hub image, data, database,
+current patch's `--check` mode; do not accidentally enable real execution by
+removing its mode selection. Use `--codex --once` only after retry approval.
+Reload and inspect the effective unit before the selected operation.
+No model, identity, permission, Hub image, data, database,
 or TLS change is needed for this entry fix. The remaining sections describe the
 original installation and acceptance context, not additional reprovisioning.
 
@@ -52,10 +117,10 @@ identity before proceeding.
 - The M0 checkout is `/data/hxa-agent-m0-pilot`, detached at `99169add`, with nine
   untracked local files. Leave it in place. Do not clean, reset, switch, or install
   M1 source there.
-- The deployed Hub is still the reported M0 version until an approved image
-  update. Real artifact acceptance requires the same M1 release's authenticated
-  download cache-header patch. This is an image-only pilot update with no
-  database migration or identity/permission change.
+- The current pilot Hub already has the authenticated-download cache-header fix
+  in `0893c8a`. These worker patches do not require another Hub image update,
+  database migration, or identity/permission change. The image-build instructions
+  below remain initial-install context.
 - Every M0 Compose invocation must retain its **three** existing Compose files,
   their order, the environment file, project name, and data volume. Record the
   actual filenames; do not reconstruct a command from generic M0 examples.
@@ -71,7 +136,7 @@ about 29 GiB free on data storage, and 18 GiB on root. Recheck capacity before
 launch. The M1 unit is bounded to one CPU, 1 GiB RAM, zero swap, and 192 tasks.
 Keep large builds and other new workloads out of the first acceptance window.
 
-## Work to prepare before applying host changes
+## Initial installation only: preparation before host changes
 
 1. Verify the approved release and review the worker, systemd unit, and environment
    example. Report missing source publication or an unexpected version.
@@ -85,13 +150,15 @@ Keep large builds and other new workloads out of the first acceptance window.
 4. Record approval for the `pilot-real-worker` Unix user/group and directories,
    the pilot member Bot and its current required full-scope token, a fresh
    dedicated Codex login, the pilot Hub image update, and a bounded real task.
-   This handoff does not assert those identities or approvals already exist.
+   These steps apply to a new installation. For the existing pilot described
+   above, reuse its established identities, login, model settings, and recorded
+   approvals; do not repeat provisioning or update the Hub for this worker patch.
 
 Only after those choices are approved, use the host operator's existing access
 to provision the runbook's isolated layout. The worker itself gets no sudo,
 Docker access, administrative Bot role, or production credential.
 
-## Deployment sequence
+## Initial installation only: deployment sequence
 
 1. Stage root-owned source under `/opt/hxa-codex-worker/releases/<full-SHA>` and
    the Node/Codex distributions at the documented absolute paths. Preserve older
@@ -135,7 +202,7 @@ production permissions, or install another model/credential as a workaround.
 | Full release commit and checksum | |
 | Pilot Hub old/new image IDs, old-image archive, effective image selection | |
 | Node 22, Codex `0.166.0`, systemd, effective UID and limits | |
-| Actual `current`-path `--help` Usage and readiness JSON; all ten checks pass | |
+| Actual `current`-path `--help` Usage and readiness JSON; all 16 checks pass | |
 | Approved model and reasoning effort | |
 | Real task/run ID, OS exit code/signal, `reviewing` result | |
 | Actual summary, `index.html`, `README.md`, and `run-metadata.json` | |

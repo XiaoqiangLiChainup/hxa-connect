@@ -13,6 +13,8 @@ EnvironmentFile=/etc/hxa-codex-worker/codex-worker.env
 Environment=HOME=/var/lib/hxa-codex-worker
 Environment=PATH=/opt/hxa-codex-worker/node/bin:/opt/hxa-codex-worker/codex/bin:/usr/local/bin:/usr/bin:/bin
 LoadCredential=hxa_task_token:/etc/hxa-codex-worker/hxa-task-token
+# Non-secret marker: the probe tests this sibling, never the actual task token.
+SetCredential=hxa_sandbox_probe:non-secret-hxa-sandbox-canary-v1
 Environment=HXA_TASK_TOKEN_FILE=%d/hxa_task_token
 ExecStartPre=/opt/hxa-codex-worker/node/bin/node /opt/hxa-codex-worker/current/scripts/codex-worker.mjs --check
 ExecStart=/opt/hxa-codex-worker/node/bin/node /opt/hxa-codex-worker/current/scripts/codex-worker.mjs --codex

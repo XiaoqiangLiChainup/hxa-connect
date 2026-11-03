@@ -9,7 +9,7 @@ import { atomicJson, createRunState, safeCode, safeMetadata } from './state.mjs'
 function processConfiguration(config) {
   // Deliberately enumerate fields: the Hub bearer and token-file path never cross this boundary.
   return Object.fromEntries([
-    'codexBin', 'codexHome', 'homeDir', 'childPath', 'model', 'reasoningEffort',
+    'codexBin', 'codexHome', 'homeDir', 'credentialDir', 'stateRoot', 'sandboxProfile', 'childPath', 'model', 'reasoningEffort',
     'timeoutMs', 'termGraceMs', 'maxStdoutBytes', 'maxStderrBytes', 'maxResultBytes', 'profile',
   ].map(key => [key, config[key]]));
 }

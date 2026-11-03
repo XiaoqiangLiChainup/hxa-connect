@@ -8,7 +8,7 @@ import { createCodexExecutor } from './codex-runner/adapter.mjs';
 
 const HELP = `Usage: node scripts/codex-worker.mjs --check | --report | --codex [--once]
 
---check  Local version, identity, permissions, and login-status checks; no inference or Hub mutation.
+--check  Local identity, login-status, and credential-free sandbox boundary checks; no inference or Hub mutation.
 --report Read-only local run/upload evidence. Needs only HXA_CODEX_STATE_DIR.
 --codex  Explicit real execution. Requires a dedicated approved identity and pinned model.
 --once   Claim at most one task; an empty queue also exits successfully.
@@ -27,13 +27,7 @@ export async function main(args = process.argv.slice(2), env = process.env, { ch
   if (options.help) { console.log(HELP); return 0; }
   if (options.mode === 'report') { console.log(JSON.stringify(reportState(readStateDirectory(env)), null, 2)); return 0; }
   const config = { ...readCodexConfiguration(env), once: options.once };
-  const readiness = await checkEnvironment(config);
-  if (options.mode === 'check') { console.log(JSON.stringify(readiness, null, 2)); return readiness.ready ? 0 : 2; }
-  if (!readiness.ready) {
-    throw new ConfigurationError(`Worker preflight failed: ${readiness.checks.filter(check => !check.passed).map(check => check.name).join(', ')}. Run --check after provisioning the dedicated environment.`);
-  }
-  process.umask(0o077);
-  const lock = acquireWorkerLock(config.stateRoot);
+  let lock;
   let executor;
   let safeToRelease = false;
   const controller = new AbortController();
@@ -43,6 +37,15 @@ export async function main(args = process.argv.slice(2), env = process.env, { ch
   process.once('SIGINT', onInterrupt);
   process.once('SIGTERM', onTerminate);
   try {
+    const readiness = await checkEnvironment(config, { signal: controller.signal });
+    if (controller.signal.aborted) readiness.ready = false;
+    if (options.mode === 'check') { console.log(JSON.stringify(readiness, null, 2)); return exitCode || (readiness.ready ? 0 : 2); }
+    if (controller.signal.aborted) return exitCode;
+    if (!readiness.ready) {
+      throw new ConfigurationError(`Worker preflight failed: ${readiness.checks.filter(check => !check.passed).map(check => check.name).join(', ')}. Run --check and inspect its local prerequisite diagnostics.`);
+    }
+    process.umask(0o077);
+    lock = acquireWorkerLock(config.stateRoot);
     const token = readHubToken(config.tokenFile);
     executor = createCodexExecutor({ ...config, token });
     console.log(JSON.stringify({ event: 'codex_worker_ready', runner_id: config.runnerId, model: config.model, concurrency: 1 }));
@@ -58,7 +61,7 @@ export async function main(args = process.argv.slice(2), env = process.env, { ch
     await executor?.drain();
     process.removeListener('SIGINT', onInterrupt);
     process.removeListener('SIGTERM', onTerminate);
-    if (safeToRelease && executor?.canReleaseLock()) lock.release();
+    if (safeToRelease && executor?.canReleaseLock()) lock?.release();
   }
 }
 

@@ -3,6 +3,8 @@ import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { ConfigurationError, normalizeBaseUrl, readConfiguration } from '../task-runner/config.mjs';
+import { checkSandbox, sandboxNotRun } from './sandbox-preflight.mjs';
+import { SANDBOX_CANARY_NAME, createSandboxProfileName } from './sandbox-policy.mjs';
 
 const executeFile = promisify(execFile);
 export const CODEX_VERSION = '0.166.0';
@@ -73,6 +75,10 @@ export function readCodexConfiguration(env = process.env) {
   const homeDir = absolutePath(env.HXA_CODEX_HOME_DIR, 'HXA_CODEX_HOME_DIR');
   const codexHome = absolutePath(env.CODEX_HOME, 'CODEX_HOME');
   const tokenFile = absolutePath(env.HXA_TASK_TOKEN_FILE, 'HXA_TASK_TOKEN_FILE');
+  const credentialDir = absolutePath(path.dirname(tokenFile), 'Task credential directory');
+  if (path.basename(tokenFile) === SANDBOX_CANARY_NAME) {
+    throw new ConfigurationError('The task token cannot use the reserved non-secret sandbox canary filename.');
+  }
   if (codexHome === homeDir || !isInside(homeDir, codexHome)) {
     throw new ConfigurationError('CODEX_HOME must be a separate directory inside the dedicated HXA_CODEX_HOME_DIR.');
   }
@@ -83,6 +89,9 @@ export function readCodexConfiguration(env = process.env) {
     if (isInside(stateRoot, protectedPath) || isInside(homeDir, protectedPath)) {
       throw new ConfigurationError('The token file and executable must be outside writable worker state and model HOME.');
     }
+  }
+  if ([stateRoot, homeDir].some(directory => isInside(directory, credentialDir) || isInside(credentialDir, directory))) {
+    throw new ConfigurationError('The task credential directory must be separate from worker state and model HOME.');
   }
   const model = env.HXA_CODEX_MODEL;
   if (!model || !/^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,127}$/.test(model)) {
@@ -101,7 +110,8 @@ export function readCodexConfiguration(env = process.env) {
   const runner = readConfiguration({ ...env, HXA_TASK_TOKEN: 'configuration-only', HXA_TASK_URL: url });
   delete runner.token;
   const config = {
-    ...runner, url, publicBaseUrl, stateRoot, codexBin, codexHome, homeDir, tokenFile,
+    ...runner, url, publicBaseUrl, stateRoot, codexBin, codexHome, homeDir, tokenFile, credentialDir,
+    sandboxProfile: createSandboxProfileName(),
     model, reasoningEffort, childPath, profile, maxArtifacts: 19,
     requiredArtifacts: profile === 'feedback-demo' ? ['index.html', 'README.md'] : [],
     timeoutMs: setting(env, 'HXA_CODEX_TASK_TIMEOUT_MS', LIMITS.timeoutMs, 1000, 43_200_000),
@@ -166,7 +176,9 @@ function assertRootManagedPath(value) {
 }
 
 /** Local checks only; --version and login status do not submit an inference task. */
-export async function preflight(config, { execute = executeFile, uid = process.getuid?.(), platform = process.platform } = {}) {
+export async function preflight(config, {
+  execute = executeFile, uid = process.getuid?.(), platform = process.platform, signal, sandboxProbe = checkSandbox,
+} = {}) {
   const checks = [];
   const check = async (name, action) => {
     try { await action(); checks.push({ name, passed: true }); }
@@ -209,13 +221,22 @@ export async function preflight(config, { execute = executeFile, uid = process.g
   const childEnv = { HOME: config.homeDir, CODEX_HOME: config.codexHome, PATH: config.childPath, LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' };
   await check('codex_0_166_0', async () => {
     if (!ready) throw new Error();
-    const result = await execute(config.codexBin, ['--version'], { env: childEnv, timeout: 5000, maxBuffer: 8192 });
+    const result = await execute(config.codexBin, ['--version'], { env: childEnv, timeout: 5000, maxBuffer: 8192, signal });
     if (result.stdout.trim() !== `codex-cli ${CODEX_VERSION}`) throw new Error();
   });
   await check('dedicated_chatgpt_login_configured', async () => {
     if (!ready || !checks.find(value => value.name === 'codex_0_166_0')?.passed) throw new Error();
-    const result = await execute(config.codexBin, ['login', 'status'], { env: childEnv, timeout: 5000, maxBuffer: 8192 });
+    const result = await execute(config.codexBin, ['login', 'status'], { env: childEnv, timeout: 5000, maxBuffer: 8192, signal });
     if (!/logged in using chatgpt/i.test(`${result.stdout}\n${result.stderr}`)) throw new Error();
   });
-  return { ready: checks.every(value => value.passed), codex_version_required: CODEX_VERSION, model: config.model, checks };
+  // The new sandbox probe is independent of token contents and model authentication.
+  // Never invoke it with an untrusted binary, directory, PATH, or unsupported runtime.
+  const sandboxReady = ['linux_non_root_user', 'node_22_or_later', 'private_state_directory',
+    'dedicated_model_directories', 'trusted_codex_executable', 'trusted_child_path', 'codex_0_166_0']
+    .every(name => checks.find(value => value.name === name)?.passed);
+  const sandboxResult = sandboxReady && !signal?.aborted
+    ? await sandboxProbe(config, { signal }) : sandboxNotRun(undefined, config);
+  checks.push(...sandboxResult.checks);
+  return { scope: 'local-prerequisites', ready: !signal?.aborted && checks.every(value => value.passed), codex_version_required: CODEX_VERSION,
+    model: config.model, checks, sandbox: sandboxResult.sandbox };
 }

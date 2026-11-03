@@ -6,12 +6,48 @@ The worker runs `codex exec` in a per-attempt workspace and uploads bounded resu
 files through the Hub. A successful execution enters `reviewing`; only the human
 task owner or an authorized Bot administrator accepts the business result.
 
-This document prepares deployment. It does not mean that a service account, Bot,
-model login, token file, systemd service, or real business demo has been created
-or executed. Record repository tests, CI, and field acceptance separately. Do not
-fill an unperformed check with a success claim.
+The first-install sections describe the original preparation; the existing-pilot
+sections below record later deployment state. Record repository tests, CI, local
+readiness, and real business acceptance separately. Do not turn an unperformed
+check or a correctly failed task into a success claim.
 
-## Existing pilot: CLI entry fix after `0893c8a`
+## Existing pilot: sandbox readiness gap after worker `1544`
+
+The field report now identifies Hub `0893c8a` and worker baseline `1544`. The
+first real Demo correctly reached `failed` after sandbox startup failed. The old
+ten checks all passed, but they did not exercise sandbox execution. Their success
+is not sufficient readiness evidence. On the reported Ubuntu 24.04 / AppArmor
+4.0 host, `kernel.apparmor_restrict_unprivileged_userns=1`; the exact bundled
+helper also failed independently with loopback `RTM_NEWADDR EPERM`, with
+`unprivileged_userns` policy in the audit evidence.
+
+The worker update can proceed with the existing dedicated identity, ChatGPT login,
+member Bot, token scope/lifetime, and `gpt-6.1-sol` / `medium` configuration.
+No new login, identity, model choice, or manual user inventory is needed for this
+code change. Preserve the CLI-entry fix below and stage the complete new release.
+Stop/reconcile only the M1 worker before switching `current`; preserve the failed
+attempt and all evidence. Hub image, data, database, and TLS remain unchanged.
+
+Install the reviewed worker unit update containing this static, non-secret canary:
+
+```ini
+SetCredential=hxa_sandbox_probe:non-secret-hxa-sandbox-canary-v1
+```
+
+This creates a known test value alongside the unit's credential file; it changes
+no login, token, token scope, or OS privilege. Keep all other service restrictions
+and local overrides. Use **`--check` mode** for validation; do not start `--codex`,
+remove the preflight mode override, or retry the failed task as part of this
+patch. Section 5 now requires all **16** checks from the current invocation.
+
+The deployment assistant has prepared an exact-helper AppArmor policy from an
+Ubuntu template and reports that offline parsing passed. It has **not** installed
+or loaded that policy. Loading it adds host security-policy permissions and needs
+explicit user approval of the concrete policy described in section 5.2. A real
+task retry also awaits explicit approval after local readiness succeeds. Code
+preparation, policy approval, and a real model retry are separate steps.
+
+## Earlier worker update: CLI entry fix after `0893c8a`
 
 This section applies to the current direct-SSH deployment assistant after the
 Zylos handoff. The dedicated user, member Bot, approved 24-hour full-scope token,
@@ -19,11 +55,12 @@ and fresh dedicated ChatGPT login are already provisioned. Preserve the configur
 `gpt-6.1-sol` / `medium` pair and the existing token scope/lifetime. Do not repeat
 the initial-install approval, identity creation, or login steps below.
 
-The `0893c8a` worker's CLI entry guard can silently exit 0 when invoked through
+The `0893c8a` worker's CLI entry guard could silently exit 0 when invoked through
 the `current` symlink, without running `--help`, `--check`, or the worker. Exit 0
-alone therefore proves nothing. The already-authorized one-shot invoked through
-the fixed real path in that release may finish; **do not interrupt the current
-task to install this patch**.
+alone therefore proves nothing. During that earlier update, the already-authorized
+one-shot could finish through the release's fixed real path. That authorization
+does not authorize retrying the now-failed Demo. Retain the entry fix and the
+following release/override safeguards; use the current patch's check-only gate.
 
 1. Stage the complete new verified release in a new root-owned release directory,
    including the shared `scripts/cli-entrypoint.mjs`. Do not copy only the worker
@@ -38,10 +75,10 @@ task to install this patch**.
    section 5, not just the process or systemd exit status.
 4. Only after that validation, restore or remove the **specific recorded temporary
    mode override** that pins the old real path. Preserve every other unit/drop-in
-   setting. Keep the authorized `--codex --once` mode: if removing the override
-   would restore resident mode, replace that same known override with the new
-   `current` path and `--once` instead. Reload systemd and inspect the effective
-   `ExecStart` and `ExecStartPre` before continuing the authorized acceptance.
+   setting. Never let removing a mode override silently restore resident mode.
+   For the current readiness patch, retain `--check`; use `--codex --once` only
+   after the real retry is approved. Reload systemd and inspect the effective
+   `ExecStart` and `ExecStartPre` before the selected operation.
 
 This is a worker CLI patch based on `0893c8a`. It changes no model, account, token,
 permission, Hub image, database, data, or TLS configuration. The initial Hub-image
@@ -72,7 +109,7 @@ provisioned pilot, use the patch section above instead of repeating these gates:
 The worker is a separate host service. For an initial installation still using
 the `99169add` Hub, update only the pilot Hub image to the verified M1 release
 that adds private/no-store cache headers to authenticated file downloads. The
-current pilot already has this fix in `0893c8a`; the CLI patch needs no further
+current pilot already has this fix in `0893c8a`; these worker patches need no further
 Hub deployment. The cache-header change introduced no database
 schema, account, permission, Compose project, volume, HTTPS site, or Zylos runtime.
 The original production deployment is outside this update.
@@ -133,7 +170,10 @@ environment-variable value. systemd makes a read-only credential copy available
 to the unit user. This is **not strong isolation between processes sharing that
 UID**: a child with equivalent filesystem access may read it. Removing a token
 from the Codex child environment alone is not a security boundary. Keep the Bot
-dedicated to this pilot and use trusted, bounded tasks.
+dedicated to this pilot and use trusted, bounded tasks. The shared Codex permission
+profile described in section 5.1 additionally denies sandboxed commands access
+to the protected directories; that enforced command policy does not turn the
+Unix UID itself into a separate identity for each process.
 
 The same dedicated Codex home is available to Codex for its own authentication.
 This M1 preflight requires the local CLI to report a **ChatGPT login**; an API-key
@@ -296,7 +336,11 @@ sets its effective read path with:
 ```ini
 LoadCredential=hxa_task_token:/etc/hxa-codex-worker/hxa-task-token
 Environment=HXA_TASK_TOKEN_FILE=%d/hxa_task_token
+SetCredential=hxa_sandbox_probe:non-secret-hxa-sandbox-canary-v1
 ```
+
+The `SetCredential` value is a public test marker, not a second authentication
+credential. The sandbox probe attempts to read this marker rather than the token.
 
 For the separately approved Codex login, run the pinned CLI as the dedicated user
 with the dedicated home, using the login mode supported by that version and the
@@ -346,10 +390,17 @@ and its parent directory must allow that group's traversal (`0750`). Only that
 dedicated account may be in the group. The reviewed unit must remove the
 `LoadCredential` line and replace `%d` with the absolute token-file path. Keep all
 other restrictions and verify the actual effective unit. This is an explicit
-file-access compatibility choice, never an environment-token fallback. If the
+file-access compatibility choice, never an environment-token fallback. The same
+public `hxa_sandbox_probe` marker must be provisioned beside the effective token
+file, with read-only worker access; a `SetCredential` in a different directory
+does not satisfy that canary check. Do not move the token to make it pass. If the
 host cannot enforce the resource and filesystem restrictions, stop deployment.
 
-### 4.5 Required pilot Hub file-header update
+### 4.5 Initial installation only: pilot Hub file-header update
+
+The existing pilot already has this patch in Hub `0893c8a`, with authenticated
+download/header checks reported complete. Skip this section for the sandbox
+preflight worker patch; retain the current Hub image and its deployment record.
 
 Code preparation and local worker preflight can proceed before this step. **Real
 artifact acceptance requires the M1 Hub patch** from the same approved source
@@ -486,7 +537,11 @@ actual output as evidence; do not substitute an expected example for it.
 `node scripts/codex-worker.mjs --check` performs a local check. It may inspect the
 pinned binary's `--version` and local login status, but does not claim tasks,
 contact the Hub, call a model, or prove that a remote account/model has quota.
-It prints status, not authentication material. Empty required model fields fail.
+The original checks inspect local login status and token-file structure; do not
+describe the **entire** check as avoiding credentials. The six new sandbox checks
+below use only temporary markers and an empty launcher home, with no real
+authentication or token reads. Output contains status, not authentication
+material. Empty required model fields fail.
 
 Use a temporary runtime override to run this mode under the **same** credentials,
 UID, paths, resource limits, and filesystem restrictions as real execution. With
@@ -519,7 +574,7 @@ or only `Result=success`. Accept the deployed preflight only when:
 - `model` equals the expected pinned model (`gpt-6.1-sol` for the currently
   approved pilot).
 - `checks` is a nonempty array, every entry has the boolean `passed: true`, and
-  all ten distinct required check names below are present.
+  all 16 distinct required check names below are present.
 
 ```text
 linux_non_root_user
@@ -532,6 +587,12 @@ trusted_codex_executable
 trusted_child_path
 codex_0_166_0
 dedicated_chatgpt_login_configured
+sandbox_command_startup
+sandbox_workspace_write
+sandbox_outside_write_denied
+sandbox_credential_reads_denied
+sandbox_network_restricted
+sandbox_probe_cleanup
 ```
 
 Empty/malformed stdout or JSON, missing checks, string values such as `"true"`,
@@ -544,6 +605,106 @@ be replaced with fabricated success output.
 
 Record this as **local preflight**, not real model or UI acceptance. Inspect
 journals locally before sharing the actual sanitized readiness output.
+
+### 5.1 What the model-free sandbox probe proves
+
+The worker runs a real, bounded sandbox command without `codex exec`, a model
+request, a Hub claim, or external network traffic. Its launcher uses new, empty
+temporary `HOME` and `CODEX_HOME` directories and does not enable
+`--include-managed-config`. The pinned CLI's sandbox call uses
+`sandbox -P <generated-profile> -C <probe-workspace> -- COMMAND`; there is no `linux`
+subcommand. Operators should invoke the worker's `--check`, not reconstruct this
+internal command with different permissions or authentication.
+
+The worker creates random exclusive (`wx`) test markers in the real dedicated
+home and Codex-home directories, then removes them. It never opens the real
+`auth.json` or Hub token for these sandbox tests. The credential-directory test
+uses only the static `hxa_sandbox_probe` canary supplied by systemd. The remaining
+canaries and workspace are new temporary probe files, not customer data.
+
+| New check | Evidence required |
+| --- | --- |
+| `sandbox_command_startup` | The actual sandbox command starts and returns its expected probe result |
+| `sandbox_workspace_write` | A write inside the probe workspace succeeds and has the expected contents |
+| `sandbox_outside_write_denied` | A write to the external test canary is denied and the canary remains unchanged |
+| `sandbox_credential_reads_denied` | Direct reads of the dedicated-home/Codex-home test markers and credential-directory canary, and reads through symlink aliases inside the workspace, are denied |
+| `sandbox_network_restricted` | The sandbox cannot connect to the parent's temporary `127.0.0.1` witness; no external endpoint is contacted |
+| `sandbox_probe_cleanup` | The probe's temporary resources and test markers are cleaned up |
+
+The probe and real task execution share a generated Codex permission profile
+named `hxa_m1_<24 random hex characters>`, chosen once per worker invocation.
+Codex merges configuration tables recursively; the fresh name avoids inheriting
+extra rules from an unrelated fixed-name profile. It extends `:workspace`, adds deny rules for the real dedicated home,
+Codex home, and credential directory, and disables sandbox network access. It
+explicitly makes the state root read-only for sandboxed commands, with a deeper
+write allowance only for the current workspace. This prevents a writable parent
+such as `/tmp` from also
+making other worker state writable. The baseline `/tmp` and `TMPDIR` write rules
+remain; `TMPDIR` is fixed to the workspace's `.tmp` directory. Do not describe
+this as making the workspace the only writable location on the whole machine.
+
+The credential directory must neither contain nor be contained by the state root
+or the real model-home directories. The policy uses the most specific matching
+path, so an overlapping deeper write allowance could otherwise override an
+ancestor deny. These are required path checks, not a reason to broaden a deny
+rule or relocate existing credentials automatically.
+
+Real execution selects the same profile through `default_permissions`; the previous
+`--sandbox` override is removed so it cannot replace that profile. This tightens
+command permissions. It does not grant host privileges or change
+`HXA_CODEX_PROFILE=feedback-demo`, which remains the separate artifact contract.
+
+A pass establishes these specific canary outcomes under that invocation's UID,
+unit restrictions, helper, and policy. It does not prove every possible sandbox
+property, remote model access, available quota, or the business Demo. The original
+ten checks alone must never be reused as proof that these six checks passed.
+
+### 5.2 Ubuntu AppArmor prerequisite and permission approval
+
+[Ubuntu 24.04 release notes](https://documentation.ubuntu.com/release-notes/24.04/)
+explain that the default unprivileged-userns policy can permit namespace creation
+while denying subsequent capabilities inside it. That is consistent with the
+reported helper initialization failure; an `EPERM` by itself is not a complete
+diagnosis. A correctly failed Demo must remain failed until a separately
+authorized new attempt.
+
+The [Noble-updates package file list](https://packages.ubuntu.com/noble-updates/all/apparmor-profiles/filelist)
+provides `bwrap-userns-restrict` under `extra-profiles`. Having its source file does
+not mean it is loaded or attached to the bundled helper. The
+[Ubuntu parser manual](https://manpages.ubuntu.com/manpages/noble/man8/apparmor_parser.8.html)
+distinguishes offline `--skip-kernel-load` checks from loading/replacing kernel
+policy. Offline parsing is neither runtime enforcement nor approval to load.
+
+The deployment assistant owns the proposed profile artifact. Before requesting
+approval to install/load it, make the concrete change reviewable:
+
+- Identify the exact root-managed bundled-helper path and binary hash, the Ubuntu
+  package/template version and ABI, and the proposed policy file/hash and diff.
+  Use the matching Ubuntu 24.04 template; current upstream `master` may use a
+  newer ABI.
+- Show unique parent and child profile names, every transition/stacking target,
+  and any include changes. Check existing attachments and name collisions;
+  changing only the filename is insufficient. The
+  [profile syntax manual](https://manpages.ubuntu.com/manpages/noble/man5/apparmor.d.5.html)
+  explains names and executable attachment; parser replacement acts on names.
+- Describe the new userns/capability allowance for the exact helper and retain
+  the intended child `audit deny capability` restriction. This helper policy is
+  not a complete least-privilege filesystem sandbox. Exact executable attachment
+  does not inherently limit its effect to one Unix UID.
+- State the specific profiles to add/load and their scoped rollback, preserving
+  existing unrelated policy. Do not disable AppArmor or the global userns
+  restriction, switch to complain/unconfined as a fallback, remove sandboxing,
+  or broaden the worker's systemd capabilities or writable paths.
+
+Installing/loading this policy changes host security permissions and therefore
+requires **explicit user approval** beyond the already-approved worker identity
+and login. The repository supplies no policy-installation or privilege-expansion
+script. Do not perform an automatic fix when the probe fails. After an approved
+policy change, rerun the full 16-check preflight in check-only mode. Even if it
+passes, the real failed-task retry remains a separate action awaiting explicit
+approval; do not automatically requeue, claim, or execute it.
+
+### 5.3 Read-only local recovery inspection
 
 For read-only local recovery inspection, stop the worker and run the following
 as the dedicated user. This mode needs only the state path, so it remains useful
@@ -565,6 +726,28 @@ separate workspace, control files, and bounded logs. Do not publish those paths
 through the web server.
 
 ## 6. Bounded real execution
+
+For the currently failed first Demo, this section is used only after the explicit
+retry approval described above. Updating readiness code, adding the non-secret
+canary, or loading an approved AppArmor profile does not itself authorize a retry.
+
+Before a real execution submits its prompt, the worker uses the pinned CLI's
+`app-server --strict-config --print-startup-config` preview to inspect managed
+requirements and reject an incompatible permission-profile fallback. It does not
+start the app server or invoke a model. This step belongs only to the authorized
+real-run path: it uses the existing dedicated Codex identity and can fetch that
+account's managed configuration. It is **not** part of the credential-free sandbox
+probe and is not invoked by `--check`. Unreadable policy, malformed output,
+unsupported version, timeout, or an incompatible required profile fails the run
+before `codex exec`; no alternative profile or model is selected.
+
+The preview has no `--ignore-user-config` equivalent, so a dedicated
+`CODEX_HOME/config.toml` is unsupported for this pilot. Preflight checks presence
+without reading or removing the file; if present, stop for configuration review.
+Keep the existing model/effort settings in the worker's environment file. The
+preview and execution are separate operations, not an atomic lock on host/cloud
+policy; keep policy stable during the authorized run and validate actual results.
+Company-managed restrictions must never be removed to make this check pass.
 
 Real execution requires the explicit `--codex` switch. `--codex --once` handles
 at most one task; an empty queue may exit successfully without testing the model.
@@ -770,11 +953,11 @@ automatic replay of unfinished work.
 | Repository tests and CI | See [M1 code validation](m1-validation.md); verify remote checks against the published full SHA |
 | Static unit/config review | Record validator version and any environment limitations |
 | Existing M0 commit, image, three Compose files, project, volume | Field inventory; preserve |
-| Pilot Hub old/new image IDs, backup archive, effective image selection | Pending approved header-patch deployment |
-| Actual Node / Codex / systemd versions | Pending target-host verification |
-| Dedicated user/Bot/login and model approval | Record approval, without credentials |
-| Local `--check` under unit | Pending |
-| Real task, queue, cancellation, recovery, and OS exit evidence | Pending |
+| Pilot Hub image and authenticated-download patch | Existing pilot: retain Hub `0893c8a` and its recorded image evidence; no Hub update is required for this worker patch |
+| Actual Node / Codex / systemd versions | Field report: Node 22.23.4, Codex 0.166.0, systemd 255; record actual versions when checking the new worker |
+| Dedicated user/Bot/login and model approval | Already established for this pilot; retain approval and `gpt-6.1-sol` / `medium`, without credentials |
+| Local `--check` under unit | New 16-check evidence pending; the earlier ten-check pass is insufficient |
+| Real task, queue, cancellation, recovery, and OS exit evidence | First Demo correctly failed at sandbox startup; preserve it. A retry awaits explicit approval |
 | Mac HTTPS downloads and human acceptance | Pending |
 | Original production / Zylos unchanged | Pending post-deployment comparison |
 | Outstanding blocker / rollback decision | State explicitly |
@@ -793,10 +976,23 @@ metadata, and a short sanitized result summary.
   establish supported flags. Do not copy newer flags or deprecated `--full-auto`
   examples into the pinned worker without verification.
 - [systemd execution configuration](https://www.freedesktop.org/software/systemd/man/latest/systemd.exec.html)
-  explains credentials, filesystem restrictions, and the JIT compatibility
+  explains `SetCredential` for non-secret literal data, credentials, filesystem restrictions, and the JIT compatibility
   constraint of `MemoryDenyWriteExecute`.
 - [systemd process termination](https://www.freedesktop.org/software/systemd/man/latest/systemd.kill.html)
   explains control-group termination and the TERM/KILL lifecycle.
 
-Documentation checked on 2026-11-03. The field report is a planning input; it is
-not evidence that the prepared M1 deployment has run.
+- OpenAI's pinned [`0.166.0` sandbox CLI](https://github.com/openai/codex/blob/rust-v0.166.0/codex-rs/cli/src/lib.rs)
+  and [sandbox dispatcher](https://github.com/openai/codex/blob/rust-v0.166.0/codex-rs/cli/src/debug_sandbox.rs)
+  establish the direct command shape. [Managed-config loading](https://github.com/openai/codex/blob/rust-v0.166.0/codex-rs/cli/src/debug_sandbox/cloud_config.rs)
+  explains why an explicit permission profile without `--include-managed-config`
+  keeps the new probe independent of account configuration.
+- The pinned [permission profile configuration](https://github.com/openai/codex/blob/rust-v0.166.0/codex-rs/config/src/permissions_toml.rs)
+  and [permissions resolution](https://github.com/openai/codex/blob/rust-v0.166.0/codex-rs/core/src/config/mod.rs)
+  define inherited profiles and the fallback that the worker refuses.
+- The pinned [startup-config preview](https://github.com/openai/codex/blob/rust-v0.166.0/codex-rs/app-server/src/startup_config.rs)
+  and [configuration manager](https://github.com/openai/codex/blob/rust-v0.166.0/codex-rs/app-server/src/config_manager.rs)
+  define the runtime-only managed-policy check and its use of the existing account.
+
+Documentation checked on 2026-11-03. Field reports establish the reported
+deployment and failed attempt; they do not establish that this new worker patch,
+AppArmor policy, or a successful real business Demo has been accepted.
